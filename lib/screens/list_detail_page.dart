@@ -3,6 +3,8 @@ import '../models/grocery_models.dart';
 import '../widgets/grocery_item_tile.dart';
 import '../widgets/add_item_sheet.dart';
 import '../utils/undo_remove.dart';
+import '../utils/group_items.dart';
+import '../utils/item_category.dart';
 
 class ListDetailPage extends StatefulWidget {
   const ListDetailPage({
@@ -39,6 +41,10 @@ class _ListDetailPageState extends State<ListDetailPage> {
     final items = widget.list.items;
     final itemCount = items.length;
     final subtitle = itemCount == 1 ? '1 item' : '$itemCount items';
+
+    final groupedResult = groupItemsByCategory(items);
+    final grouped = groupedResult.grouped;
+    final categoriesWithItems = groupedResult.categoriesWithItems;
 
     return Scaffold(
       appBar: AppBar(
@@ -89,7 +95,13 @@ class _ListDetailPageState extends State<ListDetailPage> {
           context: context,
           onAdd: (text) {
             setState(() {
-              widget.list.items.add(GroceryItem(name: text));
+              widget.list.items.add(
+                GroceryItem(
+                  id: DateTime.now().microsecondsSinceEpoch.toString(),
+                  name: text,
+                  category: categoryForItem(text),
+                ),
+              );
             });
             widget.onChanged();
           },
@@ -98,16 +110,52 @@ class _ListDetailPageState extends State<ListDetailPage> {
       ),
       body: items.isEmpty
           ? const Center(child: Text('No items yet. Tap + to add one.'))
-          : ListView.separated(
-              itemCount: items.length,
-              separatorBuilder: (_, __) => const SizedBox.shrink(),
-              itemBuilder: (context, index) {
-                final item = items[index];
+          : ListView.builder(
+              padding: const EdgeInsets.only(bottom: 120),
+              physics: const BouncingScrollPhysics(),
+              itemCount: categoriesWithItems.fold<int>(
+                0,
+                (sum, c) => sum + 1 + grouped[c]!.length,
+              ),
+              itemBuilder: (context, i) {
+                // Flattened layout: [Header, item, item, Header, item, ...]
+                int cursor = 0;
+                for (final c in categoriesWithItems) {
+                  // Header
+                  if (i == cursor) {
+                    return Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 18, 16, 6),
+                      child: Text(
+                        c,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    );
+                  }
+                  cursor++;
 
-                return GroceryItemTile(
-                  name: item.name,
-                  onTapRemove: () => _removeItemWithUndo(index),
-                );
+                  // Items in this category
+                  final list = grouped[c]!;
+                  final localIndex = i - cursor;
+                  if (localIndex >= 0 && localIndex < list.length) {
+                    final item = list[localIndex];
+                    final realIndex = widget.list.items.indexWhere(
+                      (e) => e.id == item.id,
+                    );
+
+                    return GroceryItemTile(
+                      name: item.name,
+                      onTapRemove: () {
+                        if (realIndex != -1) _removeItemWithUndo(realIndex);
+                      },
+                    );
+                  }
+                  cursor += list.length;
+                }
+
+                return const SizedBox.shrink();
               },
             ),
     );
