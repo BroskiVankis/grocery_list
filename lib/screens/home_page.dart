@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/grocery_models.dart';
 import 'list_detail_page.dart';
+import '../widgets/grocery_list_card.dart';
+import '../widgets/create_list_sheet.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -15,60 +17,12 @@ class _HomePageState extends State<HomePage> {
   void _refresh() => setState(() {});
 
   void _showCreateListSheet() {
-    final controller = TextEditingController();
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
       builder: (context) {
-        final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-        final scheme = Theme.of(context).colorScheme;
-
-        return Padding(
-          padding: EdgeInsets.fromLTRB(16, 10, 16, 16 + bottomInset),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Create a new list',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: controller,
-                textInputAction: TextInputAction.done,
-                decoration: InputDecoration(
-                  labelText: 'List name',
-                  hintText: 'e.g. Weekly groceries',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(color: scheme.outlineVariant),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(color: scheme.primary, width: 1.8),
-                  ),
-                ),
-                onSubmitted: (_) => _createList(controller.text),
-              ),
-              const SizedBox(height: 12),
-              FilledButton(
-                onPressed: () => _createList(controller.text),
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 14),
-                  child: Text('Create'),
-                ),
-              ),
-            ],
-          ),
-        );
+        return CreateListSheet(onCreate: (name) => _createList(name));
       },
     );
   }
@@ -95,9 +49,86 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final totalLists = lists.length;
+    final favoriteCount = lists.where((l) => l.isFavorite).length;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('My Lists')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        centerTitle: false,
+        elevation: 0,
+        toolbarHeight: 92,
+        backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                scheme.primary.withOpacity(0.32),
+                scheme.primary.withOpacity(0.10),
+                scheme.surface,
+              ],
+              stops: const [0.0, 0.55, 1.0],
+            ),
+          ),
+          child: SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: scheme.primary.withOpacity(0.16),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: scheme.primary.withOpacity(0.18),
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.shopping_basket_outlined,
+                      color: scheme.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'My Lists',
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.2,
+                              ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          totalLists == 0
+                              ? 'Create your first shopping list'
+                              : '$totalLists list${totalLists == 1 ? '' : 's'} • $favoriteCount saved',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: scheme.onSurface.withOpacity(0.60),
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showCreateListSheet,
         child: const Icon(Icons.add),
@@ -133,91 +164,20 @@ class _HomePageState extends State<HomePage> {
                 ),
               ),
             )
-          : Padding(
-              padding: const EdgeInsets.all(16),
-              child: GridView.builder(
-                itemCount: lists.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: 1.25,
-                ),
-                itemBuilder: (context, index) {
-                  final list = lists[index];
-                  final count = list.items.length;
+          : ListView.separated(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+              itemCount: lists.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final list = lists[index];
+                final count = list.items.length;
 
-                  return InkWell(
-                    borderRadius: BorderRadius.circular(18),
-                    onTap: () => _openList(list),
-                    child: Card(
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(14),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 8,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: scheme.primary.withOpacity(0.10),
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                    child: Text(
-                                      list.name,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.w800,
-                                            color: scheme.onSurface,
-                                          ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                if (list.isFavorite)
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: scheme.primary.withOpacity(0.12),
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                    child: Icon(
-                                      Icons.favorite,
-                                      size: 22,
-                                      color: scheme.primary,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                            const Spacer(),
-                            Text(
-                              '$count item${count == 1 ? '' : 's'}',
-                              style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(
-                                    color: scheme.onSurface.withOpacity(0.7),
-                                  ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
+                return GroceryListCard(
+                  list: list,
+                  itemCount: count,
+                  onTap: () => _openList(list),
+                );
+              },
             ),
     );
   }

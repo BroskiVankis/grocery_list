@@ -41,6 +41,7 @@ class _ListDetailPageState extends State<ListDetailPage> {
     final items = widget.list.items;
     final itemCount = items.length;
     final subtitle = itemCount == 1 ? '1 item' : '$itemCount items';
+    final scheme = Theme.of(context).colorScheme;
 
     final groupedResult = groupItemsByCategory(items);
     final grouped = groupedResult.grouped;
@@ -48,47 +49,109 @@ class _ListDetailPageState extends State<ListDetailPage> {
 
     return Scaffold(
       appBar: AppBar(
-        centerTitle: true,
-        title: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              widget.list.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontWeight: FontWeight.w900,
-                fontSize: 20,
-                letterSpacing: 0.2,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            tooltip: widget.list.isFavorite
-                ? 'Remove from favorites'
-                : 'Add to favorites',
-            onPressed: () {
-              setState(() {
-                widget.list.isFavorite = !widget.list.isFavorite;
-              });
-              widget.onChanged();
-            },
-            icon: Icon(
-              widget.list.isFavorite ? Icons.favorite : Icons.favorite_border,
+        elevation: 0,
+        toolbarHeight: 92,
+        backgroundColor: scheme.surface,
+        surfaceTintColor: Colors.transparent,
+        automaticallyImplyLeading: false,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color.alphaBlend(
+                  scheme.primary.withOpacity(0.22),
+                  scheme.surface,
+                ),
+                Color.alphaBlend(
+                  scheme.primary.withOpacity(0.10),
+                  scheme.surface,
+                ),
+                scheme.surface,
+              ],
+              stops: const [0.0, 0.55, 1.0],
             ),
           ),
-        ],
+          child: SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 14),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Back button
+                  Container(
+                    decoration: BoxDecoration(
+                      color: scheme.surfaceContainerHighest.withOpacity(0.55),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: scheme.outlineVariant.withOpacity(0.55),
+                      ),
+                    ),
+                    child: IconButton(
+                      tooltip: 'Back',
+                      onPressed: () => Navigator.of(context).maybePop(),
+                      icon: Icon(
+                        Icons.arrow_back_ios_new,
+                        color: scheme.onSurface,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+
+                  // Icon badge
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: scheme.primary.withOpacity(0.16),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: scheme.primary.withOpacity(0.18),
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.shopping_basket_outlined,
+                      color: scheme.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+
+                  // Title + subtitle
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.list.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.2,
+                              ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          subtitle,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: scheme.onSurface.withOpacity(0.60),
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => showAddItemSheet(
