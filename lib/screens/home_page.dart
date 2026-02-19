@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/grocery_models.dart';
 import 'list_detail_page.dart';
 import '../widgets/grocery_list_card.dart';
-import '../widgets/create_list_sheet.dart';
+import '../widgets/sheets/create_list_sheet.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -38,12 +38,18 @@ class _HomePageState extends State<HomePage> {
     Navigator.of(context).pop();
   }
 
-  void _openList(GroceryListModel list) {
-    Navigator.of(context).push(
+  Future<void> _openList(GroceryListModel list) async {
+    final result = await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ListDetailPage(list: list, onChanged: _refresh),
       ),
     );
+
+    if (result == 'delete') {
+      setState(() {
+        lists.remove(list);
+      });
+    }
   }
 
   @override
@@ -102,7 +108,7 @@ class _HomePageState extends State<HomePage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'My Lists',
+                          'Shared Lists',
                           style: Theme.of(context).textTheme.titleLarge
                               ?.copyWith(
                                 fontWeight: FontWeight.w900,
@@ -112,8 +118,8 @@ class _HomePageState extends State<HomePage> {
                         const SizedBox(height: 4),
                         Text(
                           totalLists == 0
-                              ? 'Create your first shopping list'
-                              : '$totalLists list${totalLists == 1 ? '' : 's'} • $favoriteCount saved',
+                              ? 'Create your first shared shopping list'
+                              : '$totalLists list${totalLists == 1 ? '' : 's'}',
                           style: Theme.of(context).textTheme.bodySmall
                               ?.copyWith(
                                 fontWeight: FontWeight.w700,
