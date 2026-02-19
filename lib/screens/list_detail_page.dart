@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+
 import '../models/grocery_models.dart';
-import '../widgets/grocery_item_tile.dart';
-import '../widgets/add_item_sheet.dart';
+import '../utils/group_items.dart';
+import '../utils/item_category.dart';
 import '../utils/undo_remove.dart';
+import '../widgets/sheets/add_item_sheet.dart';
+import '../widgets/list_detail/list_detail_app_bar.dart';
+import '../widgets/list_detail/list_detail_body.dart';
 
 class ListDetailPage extends StatefulWidget {
   const ListDetailPage({
@@ -20,6 +24,82 @@ class ListDetailPage extends StatefulWidget {
 
 class _ListDetailPageState extends State<ListDetailPage> {
   final UndoRemove<GroceryItem> _undo = UndoRemove<GroceryItem>();
+
+  Future<void> _renameList() async {
+    final controller = TextEditingController(text: widget.list.name);
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) {
+        final scheme = Theme.of(ctx).colorScheme;
+        return AlertDialog(
+          title: const Text('Rename list'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            textInputAction: TextInputAction.done,
+            decoration: const InputDecoration(hintText: 'List name'),
+            onSubmitted: (v) => Navigator.of(ctx).pop(v),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: scheme.primary,
+                foregroundColor: scheme.onPrimary,
+              ),
+              onPressed: () => Navigator.of(ctx).pop(controller.text),
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+
+    final newName = (result ?? '').trim();
+    if (newName.isEmpty) return;
+
+    setState(() {
+      widget.list.name = newName;
+    });
+    widget.onChanged();
+  }
+
+  Future<void> _deleteList() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        final scheme = Theme.of(ctx).colorScheme;
+        return AlertDialog(
+          title: const Text('Delete list?'),
+          content: const Text('This will remove the list and all its items.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: scheme.error,
+                foregroundColor: scheme.onError,
+              ),
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm != true) return;
+    if (!mounted) return;
+
+    // Let HomePage remove this list
+    Navigator.of(context).pop('delete');
+  }
 
   void _removeItemWithUndo(int index) {
     _undo.removeWithUndo(
@@ -40,76 +120,45 @@ class _ListDetailPageState extends State<ListDetailPage> {
     final itemCount = items.length;
     final subtitle = itemCount == 1 ? '1 item' : '$itemCount items';
 
+    final groupedResult = groupItemsByCategory(items);
+    final grouped = groupedResult.grouped;
+    final categoriesWithItems = groupedResult.categoriesWithItems;
+
     return Scaffold(
-      appBar: AppBar(
-        centerTitle: true,
-        title: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              widget.list.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontWeight: FontWeight.w900,
-                fontSize: 20,
-                letterSpacing: 0.2,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            tooltip: widget.list.isFavorite
-                ? 'Remove from favorites'
-                : 'Add to favorites',
-            onPressed: () {
-              setState(() {
-                widget.list.isFavorite = !widget.list.isFavorite;
-              });
-              widget.onChanged();
-            },
-            icon: Icon(
-              widget.list.isFavorite ? Icons.favorite : Icons.favorite_border,
-            ),
-          ),
-        ],
+      appBar: ListDetailAppBar(
+        title: widget.list.name,
+        subtitle: subtitle,
+        onBack: () => Navigator.of(context).maybePop(),
+        onRename: _renameList,
+        onDelete: _deleteList,
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => showAddItemSheet(
           context: context,
           onAdd: (text) {
             setState(() {
-              widget.list.items.add(GroceryItem(name: text));
+              widget.list.items.add(
+                GroceryItem(
+                  id: DateTime.now().microsecondsSinceEpoch.toString(),
+                  name: text,
+                  category: categoryForItem(text),
+                ),
+              );
             });
             widget.onChanged();
           },
         ),
         child: const Icon(Icons.add),
       ),
-      body: items.isEmpty
-          ? const Center(child: Text('No items yet. Tap + to add one.'))
-          : ListView.separated(
-              itemCount: items.length,
-              separatorBuilder: (_, __) => const SizedBox.shrink(),
-              itemBuilder: (context, index) {
-                final item = items[index];
-
-                return GroceryItemTile(
-                  name: item.name,
-                  onTapRemove: () => _removeItemWithUndo(index),
-                );
-              },
-            ),
+      body: ListDetailBody(
+        items: items,
+        grouped: grouped,
+        categoriesWithItems: categoriesWithItems,
+        onRemoveByItemId: (itemId) {
+          final realIndex = widget.list.items.indexWhere((e) => e.id == itemId);
+          if (realIndex != -1) _removeItemWithUndo(realIndex);
+        },
+      ),
     );
   }
 }

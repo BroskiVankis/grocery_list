@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'screens/landing_page.dart';
 import 'package:flutter/services.dart';
+
+import 'screens/landing_page.dart';
+import 'screens/main_shell.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,7 +28,11 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const LandingPage(),
+      initialRoute: '/',
+      routes: {
+        '/': (_) => const LandingPage(),
+        '/app': (_) => const MainShell(),
+      },
     );
   }
 }
