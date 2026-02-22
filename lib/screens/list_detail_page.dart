@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/grocery_models.dart';
+import '../theme/app_colors.dart';
 import '../utils/group_items.dart';
 import '../utils/item_category.dart';
 import '../utils/undo_remove.dart';
@@ -31,25 +32,44 @@ class _ListDetailPageState extends State<ListDetailPage> {
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) {
-        final scheme = Theme.of(ctx).colorScheme;
         return AlertDialog(
+          backgroundColor: AppColors.white,
           title: const Text('Rename list'),
           content: TextField(
             controller: controller,
             autofocus: true,
             textInputAction: TextInputAction.done,
-            decoration: const InputDecoration(hintText: 'List name'),
+            cursorColor: AppColors.brandGreen,
+            decoration: InputDecoration(
+              hintText: 'List name',
+              filled: true,
+              fillColor: AppColors.inputBg,
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.inputBorderSoft),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(
+                  color: AppColors.brandGreen,
+                  width: 1.8,
+                ),
+              ),
+            ),
             onSubmitted: (v) => Navigator.of(ctx).pop(v),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.textSecondary,
+              ),
               child: const Text('Cancel'),
             ),
             FilledButton(
               style: FilledButton.styleFrom(
-                backgroundColor: scheme.primary,
-                foregroundColor: scheme.onPrimary,
+                backgroundColor: AppColors.brandGreen,
+                foregroundColor: AppColors.white,
               ),
               onPressed: () => Navigator.of(ctx).pop(controller.text),
               child: const Text('Save'),
@@ -72,19 +92,22 @@ class _ListDetailPageState extends State<ListDetailPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) {
-        final scheme = Theme.of(ctx).colorScheme;
         return AlertDialog(
+          backgroundColor: AppColors.white,
           title: const Text('Delete list?'),
           content: const Text('This will remove the list and all its items.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.textSecondary,
+              ),
               child: const Text('Cancel'),
             ),
             FilledButton(
               style: FilledButton.styleFrom(
-                backgroundColor: scheme.error,
-                foregroundColor: scheme.onError,
+                backgroundColor: AppColors.pressedGreen,
+                foregroundColor: AppColors.white,
               ),
               onPressed: () => Navigator.of(ctx).pop(true),
               child: const Text('Delete'),
@@ -125,6 +148,8 @@ class _ListDetailPageState extends State<ListDetailPage> {
     final categoriesWithItems = groupedResult.categoriesWithItems;
 
     return Scaffold(
+      backgroundColor: AppColors.sageTop,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       appBar: ListDetailAppBar(
         title: widget.list.name,
         subtitle: subtitle,
@@ -132,23 +157,39 @@ class _ListDetailPageState extends State<ListDetailPage> {
         onRename: _renameList,
         onDelete: _deleteList,
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => showAddItemSheet(
-          context: context,
-          onAdd: (text) {
-            setState(() {
-              widget.list.items.add(
-                GroceryItem(
-                  id: DateTime.now().microsecondsSinceEpoch.toString(),
-                  name: text,
-                  category: categoryForItem(text),
-                ),
-              );
-            });
-            widget.onChanged();
-          },
+      floatingActionButton: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(999),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x1F000000),
+              blurRadius: 20,
+              offset: Offset(0, 6),
+            ),
+          ],
         ),
-        child: const Icon(Icons.add),
+        child: FloatingActionButton(
+          elevation: 0,
+          highlightElevation: 0,
+          onPressed: () => showAddItemSheet(
+            context: context,
+            onAdd: (text) {
+              setState(() {
+                widget.list.items.add(
+                  GroceryItem(
+                    id: DateTime.now().microsecondsSinceEpoch.toString(),
+                    name: text,
+                    category: categoryForItem(text),
+                  ),
+                );
+              });
+              widget.onChanged();
+            },
+          ),
+          backgroundColor: AppColors.brandGreen,
+          foregroundColor: AppColors.white,
+          child: const Icon(Icons.add),
+        ),
       ),
       body: ListDetailBody(
         items: items,

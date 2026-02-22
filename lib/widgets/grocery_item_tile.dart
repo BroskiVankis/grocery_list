@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../theme/app_colors.dart';
 import '../utils/item_emoji.dart';
 
 class GroceryItemTile extends StatelessWidget {
@@ -13,8 +15,6 @@ class GroceryItemTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -24,14 +24,17 @@ class GroceryItemTile extends StatelessWidget {
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
-            color: scheme.surfaceContainerHighest.withOpacity(0.7),
+            color: AppColors.white,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: scheme.outlineVariant.withOpacity(0.7)),
+            border: Border.all(color: AppColors.inputBorder),
           ),
           child: ListTile(
             title: Text(
               name,
-              style: const TextStyle(fontWeight: FontWeight.w700),
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
             ),
             trailing: Text(
               emojiForItem(name),

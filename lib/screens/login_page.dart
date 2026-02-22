@@ -102,14 +102,30 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    // Fresh Market palette
+    const sageTop = Color(0xFFF2F7F3);
+    const white = Color(0xFFFFFFFF);
+
+    // Brand
+    const brandGreen = Color(0xFF5E8C61);
+    const pressedGreen = Color(0xFF4F7A52);
+
+    // Neutrals
+    const socialBorder = Color(0xFFE3E8E5); // per spec for social buttons
+    const inputBorder = Color(0xFFE7ECE9); // slightly lighter than before
+    const dividerColor = Color(0xFFEEF2EF); // lighter than input borders
+
+    const textPrimary = Color(0xFF1F2A24);
+    const textSecondary = Color(0xFF6B7C73);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light.copyWith(
+      value: SystemUiOverlayStyle.dark.copyWith(
         statusBarColor: Colors.transparent,
+        systemNavigationBarColor: Colors.transparent,
+        systemNavigationBarIconBrightness: Brightness.dark,
       ),
       child: Scaffold(
-        backgroundColor: scheme.primary,
+        backgroundColor: sageTop,
         body: LayoutBuilder(
           builder: (context, constraints) {
             return SingleChildScrollView(
@@ -122,16 +138,16 @@ class _LoginPageState extends State<LoginPage> {
                       Container(
                         width: double.infinity,
                         padding: EdgeInsets.fromLTRB(
-                          20,
-                          MediaQuery.of(context).padding.top + 18,
-                          20,
-                          26,
+                          24,
+                          MediaQuery.of(context).padding.top + 24,
+                          24,
+                          32,
                         ),
-                        decoration: BoxDecoration(
-                          color: scheme.primary,
-                          borderRadius: const BorderRadius.only(
-                            bottomLeft: Radius.circular(48),
-                            bottomRight: Radius.circular(16),
+                        decoration: const BoxDecoration(
+                          color: sageTop,
+                          borderRadius: BorderRadius.only(
+                            bottomLeft: Radius.circular(32),
+                            bottomRight: Radius.circular(32),
                           ),
                         ),
                         child: Column(
@@ -146,10 +162,10 @@ class _LoginPageState extends State<LoginPage> {
                                     'Grocery Store',
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
-                                      color: Colors.white,
+                                      color: textPrimary,
                                       fontSize: 20,
                                       fontWeight: FontWeight.w800,
-                                      letterSpacing: 0.2,
+                                      letterSpacing: 0.3,
                                     ),
                                   ),
                                   SizedBox(height: 8),
@@ -157,7 +173,7 @@ class _LoginPageState extends State<LoginPage> {
                                     'Everything you need, in one place',
                                     textAlign: TextAlign.center,
                                     style: TextStyle(
-                                      color: Colors.white70,
+                                      color: textSecondary,
                                       fontSize: 14,
                                       fontWeight: FontWeight.w500,
                                     ),
@@ -165,7 +181,7 @@ class _LoginPageState extends State<LoginPage> {
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 14),
+                            const SizedBox(height: 24),
                             Center(
                               child: SizedBox(
                                 height: 180,
@@ -184,26 +200,26 @@ class _LoginPageState extends State<LoginPage> {
                         child: Container(
                           width: double.infinity,
                           clipBehavior: Clip.antiAlias,
-                          decoration: BoxDecoration(
-                            color: scheme.surface,
-                            borderRadius: const BorderRadius.only(
-                              topLeft: Radius.circular(34),
-                              topRight: Radius.circular(34),
+                          decoration: const BoxDecoration(
+                            color: white,
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(28),
+                              topRight: Radius.circular(28),
                             ),
                             boxShadow: [
                               BoxShadow(
-                                blurRadius: 24,
-                                offset: const Offset(0, -10),
-                                color: Colors.black.withOpacity(0.10),
+                                offset: Offset(0, -6),
+                                blurRadius: 18,
+                                color: Color(0x0A000000), // rgba(0,0,0,0.04)
                               ),
                             ],
                           ),
                           child: Padding(
                             padding: EdgeInsets.fromLTRB(
-                              20,
-                              18,
-                              20,
-                              26 + MediaQuery.of(context).padding.bottom,
+                              24,
+                              24,
+                              24,
+                              24 + MediaQuery.of(context).padding.bottom,
                             ),
                             child: Form(
                               key: _formKey,
@@ -226,7 +242,7 @@ class _LoginPageState extends State<LoginPage> {
                                       return null;
                                     },
                                   ),
-                                  const SizedBox(height: 14),
+                                  const SizedBox(height: 16),
                                   _ValidatedPasswordField(
                                     controller: _passwordCtrl,
                                     icon: Icons.lock_outline,
@@ -245,11 +261,12 @@ class _LoginPageState extends State<LoginPage> {
                                       return null;
                                     },
                                   ),
-                                  const SizedBox(height: 14),
+                                  const SizedBox(height: 16),
 
                                   Row(
                                     children: [
                                       Checkbox(
+                                        activeColor: brandGreen,
                                         value: rememberMe,
                                         onChanged: (v) => setState(
                                           () => rememberMe = v ?? false,
@@ -258,56 +275,105 @@ class _LoginPageState extends State<LoginPage> {
                                       const Text('Remember me'),
                                       const Spacer(),
                                       TextButton(
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: brandGreen,
+                                        ),
                                         onPressed: () {},
                                         child: const Text('Forgot Password?'),
                                       ),
                                     ],
                                   ),
 
-                                  const SizedBox(height: 10),
+                                  const SizedBox(height: 16),
                                   SizedBox(
                                     width: double.infinity,
-                                    child: FilledButton(
-                                      style: FilledButton.styleFrom(
-                                        backgroundColor: scheme.primary,
-                                        foregroundColor: scheme.onPrimary,
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 14,
+                                    child: DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(
+                                          999,
                                         ),
+                                        boxShadow: const [
+                                          BoxShadow(
+                                            offset: Offset(0, 4),
+                                            blurRadius: 12,
+                                            color: Color(
+                                              0x0F000000,
+                                            ), // rgba(0,0,0,0.06)
+                                          ),
+                                        ],
                                       ),
-                                      onPressed: _login,
-                                      child: const Text('Sign in'),
+                                      child: FilledButton(
+                                        style: ButtonStyle(
+                                          backgroundColor:
+                                              MaterialStateProperty.resolveWith(
+                                                (states) =>
+                                                    states.contains(
+                                                      MaterialState.pressed,
+                                                    )
+                                                    ? pressedGreen
+                                                    : brandGreen,
+                                              ),
+                                          foregroundColor:
+                                              MaterialStateProperty.all<Color>(
+                                                Colors.white,
+                                              ),
+                                          elevation:
+                                              MaterialStateProperty.all<double>(
+                                                0,
+                                              ),
+                                          shape:
+                                              MaterialStateProperty.all<
+                                                OutlinedBorder
+                                              >(const StadiumBorder()),
+                                          padding:
+                                              MaterialStateProperty.all<
+                                                EdgeInsetsGeometry
+                                              >(
+                                                const EdgeInsets.symmetric(
+                                                  vertical: 14,
+                                                ),
+                                              ),
+                                        ),
+                                        onPressed: _login,
+                                        child: const Text('Sign in'),
+                                      ),
                                     ),
                                   ),
 
-                                  const SizedBox(height: 18),
+                                  const SizedBox(height: 24),
                                   Row(
                                     children: [
                                       Expanded(
-                                        child: Divider(
-                                          color: scheme.outlineVariant,
-                                        ),
+                                        child: Divider(color: dividerColor),
                                       ),
-                                      const Padding(
-                                        padding: EdgeInsets.symmetric(
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
                                           horizontal: 10,
                                         ),
-                                        child: Text('OR'),
+                                        child: Text(
+                                          'OR',
+                                          style: const TextStyle(
+                                            color: textSecondary,
+                                          ),
+                                        ),
                                       ),
                                       Expanded(
-                                        child: Divider(
-                                          color: scheme.outlineVariant,
-                                        ),
+                                        child: Divider(color: dividerColor),
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 14),
+                                  const SizedBox(height: 16),
 
                                   Row(
                                     children: [
                                       Expanded(
                                         child: OutlinedButton.icon(
                                           style: OutlinedButton.styleFrom(
+                                            backgroundColor: white,
+                                            foregroundColor: textPrimary,
+                                            side: const BorderSide(
+                                              color: socialBorder,
+                                            ),
                                             padding: const EdgeInsets.symmetric(
                                               vertical: 14,
                                               horizontal: 12,
@@ -321,6 +387,7 @@ class _LoginPageState extends State<LoginPage> {
                                           icon: const FaIcon(
                                             FontAwesomeIcons.facebookF,
                                             size: 18,
+                                            color: Color(0xFF1877F2),
                                           ),
                                           label: const Text('Facebook'),
                                         ),
@@ -329,6 +396,11 @@ class _LoginPageState extends State<LoginPage> {
                                       Expanded(
                                         child: OutlinedButton.icon(
                                           style: OutlinedButton.styleFrom(
+                                            backgroundColor: white,
+                                            foregroundColor: textPrimary,
+                                            side: const BorderSide(
+                                              color: socialBorder,
+                                            ),
                                             padding: const EdgeInsets.symmetric(
                                               vertical: 14,
                                               horizontal: 12,
@@ -339,9 +411,25 @@ class _LoginPageState extends State<LoginPage> {
                                             ),
                                           ),
                                           onPressed: () {},
-                                          icon: const FaIcon(
-                                            FontAwesomeIcons.google,
-                                            size: 18,
+                                          icon: ShaderMask(
+                                            shaderCallback: (rect) {
+                                              return const LinearGradient(
+                                                begin: Alignment.topLeft,
+                                                end: Alignment.bottomRight,
+                                                colors: [
+                                                  Color(0xFF4285F4),
+                                                  Color(0xFF34A853),
+                                                  Color(0xFFFBBC05),
+                                                  Color(0xFFEA4335),
+                                                ],
+                                                stops: [0.0, 0.33, 0.66, 1.0],
+                                              ).createShader(rect);
+                                            },
+                                            child: const FaIcon(
+                                              FontAwesomeIcons.google,
+                                              size: 18,
+                                              color: Colors.white,
+                                            ),
                                           ),
                                           label: const Text('Google'),
                                         ),
@@ -355,6 +443,9 @@ class _LoginPageState extends State<LoginPage> {
                                     children: [
                                       const Text("Don't have an account? "),
                                       TextButton(
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: brandGreen,
+                                        ),
                                         onPressed: _openRegister,
                                         child: const Text('Register Now'),
                                       ),
@@ -393,7 +484,9 @@ class _InputField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    const white = Color(0xFFFFFFFF);
+    const brandGreen = Color(0xFF5E8C61);
+    const border = Color(0xFFE7ECE9);
 
     return TextField(
       obscureText: obscureText,
@@ -402,15 +495,15 @@ class _InputField extends StatelessWidget {
         prefixIcon: Icon(icon),
         hintText: hintText,
         filled: true,
-        fillColor: scheme.surface,
+        fillColor: white,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: scheme.outlineVariant),
+          borderSide: BorderSide(color: border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: scheme.primary, width: 1.6),
+          borderSide: BorderSide(color: brandGreen, width: 1.6),
         ),
       ),
     );
@@ -436,7 +529,9 @@ class _ValidatedInputField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    const white = Color(0xFFFFFFFF);
+    const brandGreen = Color(0xFF5E8C61);
+    const border = Color(0xFFE7ECE9);
 
     return TextFormField(
       controller: controller,
@@ -447,15 +542,15 @@ class _ValidatedInputField extends StatelessWidget {
         prefixIcon: Icon(icon),
         hintText: hintText,
         filled: true,
-        fillColor: scheme.surface,
+        fillColor: white,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: scheme.outlineVariant),
+          borderSide: BorderSide(color: border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: scheme.primary, width: 1.6),
+          borderSide: BorderSide(color: brandGreen, width: 1.6),
         ),
       ),
     );
@@ -481,7 +576,9 @@ class _ValidatedPasswordField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    const white = Color(0xFFFFFFFF);
+    const brandGreen = Color(0xFF5E8C61);
+    const border = Color(0xFFE7ECE9);
 
     return TextFormField(
       controller: controller,
@@ -495,15 +592,15 @@ class _ValidatedPasswordField extends StatelessWidget {
           icon: Icon(obscureText ? Icons.visibility_off : Icons.visibility),
         ),
         filled: true,
-        fillColor: scheme.surface,
+        fillColor: white,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: scheme.outlineVariant),
+          borderSide: BorderSide(color: border),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: scheme.primary, width: 1.6),
+          borderSide: BorderSide(color: brandGreen, width: 1.6),
         ),
       ),
     );

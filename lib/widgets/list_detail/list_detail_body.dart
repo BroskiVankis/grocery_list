@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+
 import '../../models/grocery_models.dart';
+import '../../theme/app_colors.dart';
 import '../grocery_item_tile.dart';
 
 class ListDetailBody extends StatelessWidget {
@@ -19,7 +21,52 @@ class ListDetailBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) {
-      return const Center(child: Text('No items yet. Tap + to add one.'));
+      return TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0, end: 1),
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOut,
+        builder: (context, t, child) {
+          return Opacity(
+            opacity: t,
+            child: Transform.translate(
+              offset: Offset(0, (1 - t) * 12),
+              child: child,
+            ),
+          );
+        },
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 32, 24, 0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.shopping_basket_outlined,
+                  size: 44,
+                  color: AppColors.brandGreen.withOpacity(0.55),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  'No items yet',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Tap + to add one.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textSecondary.withOpacity(0.74),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
     }
 
     return ListView.builder(
@@ -41,6 +88,7 @@ class ListDetailBody extends StatelessWidget {
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w900,
                   letterSpacing: 0.3,
+                  color: AppColors.textPrimary,
                 ),
               ),
             );

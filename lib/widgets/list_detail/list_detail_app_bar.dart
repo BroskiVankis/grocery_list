@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../theme/app_colors.dart';
 import '../common/app_bar_pill_button.dart';
 
 enum ListMenuAction { rename, delete }
@@ -24,12 +26,10 @@ class ListDetailAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     return AppBar(
       elevation: 0,
       toolbarHeight: 92,
-      backgroundColor: scheme.surface,
+      backgroundColor: AppColors.sageTop,
       surfaceTintColor: Colors.transparent,
       automaticallyImplyLeading: false,
       flexibleSpace: _ListDetailHeader(
@@ -60,17 +60,15 @@ class _ListDetailHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color.alphaBlend(scheme.primary.withOpacity(0.22), scheme.surface),
-            Color.alphaBlend(scheme.primary.withOpacity(0.10), scheme.surface),
-            scheme.surface,
+            AppColors.brandGreen.withOpacity(0.20),
+            AppColors.brandGreen.withOpacity(0.10),
+            AppColors.sageTop,
           ],
           stops: const [0.0, 0.55, 1.0],
         ),
@@ -111,7 +109,7 @@ class _ListDetailHeader extends StatelessWidget {
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           fontWeight: FontWeight.w700,
-                          color: scheme.onSurface.withOpacity(0.60),
+                          color: AppColors.textSecondary.withOpacity(0.75),
                         ),
                       ),
                     ],
@@ -125,8 +123,12 @@ class _ListDetailHeader extends StatelessWidget {
               PopupMenuButton<ListMenuAction>(
                 tooltip: 'More',
                 offset: const Offset(0, 52),
+                color: AppColors.white,
+                surfaceTintColor: Colors.transparent,
+                shadowColor: const Color(0x1A000000),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
+                  side: const BorderSide(color: AppColors.inputBorder),
                 ),
                 onSelected: (action) {
                   switch (action) {
@@ -143,9 +145,15 @@ class _ListDetailHeader extends StatelessWidget {
                     value: ListMenuAction.rename,
                     child: Row(
                       children: [
-                        Icon(Icons.edit_outlined),
+                        Icon(
+                          Icons.delete_outline,
+                          color: AppColors.textPrimary,
+                        ),
                         SizedBox(width: 10),
-                        Text('Rename list'),
+                        Text(
+                          'Rename list',
+                          style: TextStyle(color: AppColors.textPrimary),
+                        ),
                       ],
                     ),
                   ),
@@ -153,9 +161,15 @@ class _ListDetailHeader extends StatelessWidget {
                     value: ListMenuAction.delete,
                     child: Row(
                       children: [
-                        Icon(Icons.delete_outline),
+                        Icon(
+                          Icons.delete_outline,
+                          color: AppColors.pressedGreen,
+                        ),
                         SizedBox(width: 10),
-                        Text('Delete list'),
+                        Text(
+                          'Delete list',
+                          style: TextStyle(color: AppColors.pressedGreen),
+                        ),
                       ],
                     ),
                   ),

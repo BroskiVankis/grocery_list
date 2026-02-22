@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import '../models/grocery_models.dart';
 
-class GroceryListCard extends StatelessWidget {
+import '../models/grocery_models.dart';
+import '../theme/app_colors.dart';
+
+class GroceryListCard extends StatefulWidget {
   const GroceryListCard({
     super.key,
     required this.list,
@@ -14,108 +16,125 @@ class GroceryListCard extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+  State<GroceryListCard> createState() => _GroceryListCardState();
+}
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(18),
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: scheme.surface,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: scheme.outlineVariant.withOpacity(0.55)),
-          boxShadow: [
-            BoxShadow(
-              color: scheme.shadow.withOpacity(0.08),
-              blurRadius: 14,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: scheme.primary.withOpacity(0.14),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(Icons.receipt_long, color: scheme.primary),
+class _GroceryListCardState extends State<GroceryListCard> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedScale(
+      duration: const Duration(milliseconds: 120),
+      curve: Curves.easeOut,
+      scale: _pressed ? 0.98 : 1,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onHighlightChanged: (isPressed) => setState(() => _pressed = isPressed),
+        onTap: widget.onTap,
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: AppColors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: AppColors.inputBorder),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x0F000000),
+                blurRadius: 12,
+                offset: Offset(0, 2),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      list.name,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        height: 1.12,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: scheme.surfaceContainerHighest.withOpacity(
-                              0.55,
-                            ),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            '$itemCount item${itemCount == 1 ? '' : 's'}',
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  color: scheme.onSurface.withOpacity(0.75),
-                                ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        if (list.isFavorite)
-                          Text(
-                            'Saved',
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  color: scheme.primary,
-                                ),
-                          ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 10),
-              if (list.isFavorite)
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
-                    color: scheme.primary.withOpacity(0.12),
+                    color: AppColors.brandGreen.withOpacity(0.14),
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Icon(Icons.favorite, size: 20, color: scheme.primary),
-                )
-              else
-                Icon(
-                  Icons.chevron_right,
-                  color: scheme.onSurface.withOpacity(0.35),
+                  child: const Icon(
+                    Icons.receipt_long,
+                    color: AppColors.brandGreen,
+                  ),
                 ),
-            ],
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.list.name,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              fontWeight: FontWeight.w900,
+                              height: 1.12,
+                              color: AppColors.textPrimary,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.brandGreen.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              '${widget.itemCount} item${widget.itemCount == 1 ? '' : 's'}',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.brandGreen.withOpacity(
+                                      0.85,
+                                    ),
+                                  ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          if (widget.list.isFavorite)
+                            Text(
+                              'Saved',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.brandGreen,
+                                  ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                if (widget.list.isFavorite)
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.brandGreen.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Icon(
+                      Icons.favorite,
+                      size: 20,
+                      color: AppColors.brandGreen,
+                    ),
+                  )
+                else
+                  const Icon(Icons.chevron_right, color: AppColors.footerText),
+              ],
+            ),
           ),
         ),
       ),

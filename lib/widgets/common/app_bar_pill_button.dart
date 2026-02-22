@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../theme/app_colors.dart';
+
 class AppBarPillButton extends StatelessWidget {
   final String tooltip;
   final IconData icon;
@@ -14,20 +16,18 @@ class AppBarPillButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     return Material(
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: onPressed,
         child: Container(
-          width: 46,
-          height: 46,
+          width: 42,
+          height: 42,
           decoration: BoxDecoration(
-            color: scheme.primary.withOpacity(0.10),
+            color: AppColors.brandGreen.withOpacity(0.08),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: scheme.primary.withOpacity(0.16)),
+            border: Border.all(color: AppColors.brandGreen.withOpacity(0.14)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.05),
@@ -37,7 +37,7 @@ class AppBarPillButton extends StatelessWidget {
             ],
           ),
           alignment: Alignment.center,
-          child: Icon(icon, color: scheme.primary, size: 20),
+          child: Icon(icon, color: AppColors.brandGreen, size: 20),
         ),
       ),
     );
