@@ -1,9 +1,13 @@
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lottie/lottie.dart';
-import 'dart:convert';
-import 'package:crypto/crypto.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../theme/app_colors.dart';
+import '../widgets/auth/auth_fields.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -41,7 +45,6 @@ class _RegisterPageState extends State<RegisterPage> {
 
   bool _isValidEmail(String email) {
     final e = email.trim();
-    // Simple MVP-friendly email check
     final re = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
     return re.hasMatch(e);
   }
@@ -64,6 +67,7 @@ class _RegisterPageState extends State<RegisterPage> {
     // MVP: one local account per device
     final existingEmail = prefs.getString('local_user_email');
     if (existingEmail != null && existingEmail.isNotEmpty) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -85,489 +89,427 @@ class _RegisterPageState extends State<RegisterPage> {
     await prefs.setString('local_user_email', email);
     await prefs.setString('local_user_salt', salt);
     await prefs.setString('local_user_hash', hash);
+
+    // Registration should not auto-login; login screen will authenticate.
     await prefs.setBool('logged_in', false);
 
     if (!mounted) return;
-
-    // Go back to Login page (typically the previous screen)
     Navigator.of(context).pop({'email': email});
   }
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final h = MediaQuery.of(context).size.height;
+    final isCompact = h < 900;
+
+    final headerBottomPadding = isCompact ? 8.0 : 16.0;
+    final titleToSubtitle = isCompact ? 8.0 : 10.0;
+    final subtitleToIllustration = isCompact ? 10.0 : 18.0;
+    final illustrationHeight = isCompact ? 128.0 : 168.0;
+    final cardTopGap = isCompact ? 8.0 : 12.0;
+    final headerTopExtra = isCompact ? 10.0 : 16.0;
+
+    final cardInnerTop = isCompact ? 16.0 : 26.0;
+    final fieldHeight = isCompact ? 50.0 : 56.0;
+    final fieldGap = isCompact ? 12.0 : 16.0;
+    final footerLineHeight = isCompact ? 1.35 : 1.5;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light.copyWith(
+      value: SystemUiOverlayStyle.dark.copyWith(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light, // Android
-        statusBarBrightness: Brightness.dark, // iOS
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+        systemNavigationBarColor: Colors.transparent,
+        systemNavigationBarIconBrightness: Brightness.dark,
       ),
       child: Scaffold(
-        backgroundColor: scheme.primary,
-        body: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: IntrinsicHeight(
-                  child: Column(
-                    children: [
-                      // Header
-                      Container(
-                        width: double.infinity,
-                        padding: EdgeInsets.fromLTRB(
-                          20,
-                          MediaQuery.of(context).padding.top + 18,
-                          20,
-                          18,
-                        ),
-                        decoration: BoxDecoration(
-                          color: scheme.primary,
-                          borderRadius: const BorderRadius.only(
-                            bottomLeft: Radius.circular(48),
-                            bottomRight: Radius.circular(16),
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Row(
-                              children: [
-                                IconButton(
-                                  onPressed: () => Navigator.of(context).pop(),
-                                  icon: const Icon(Icons.arrow_back_ios_new),
-                                  color: Colors.white,
-                                ),
-                                const Spacer(),
-                                const Text(
-                                  'Create account',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 0.2,
-                                  ),
-                                ),
-                                const Spacer(),
-                                // keep layout centered
-                                const SizedBox(width: 48),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            const Text(
-                              'Start your shared grocery list in under a minute.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Center(
-                              child: SizedBox(
-                                height: 140,
-                                child: Lottie.asset(
-                                  'assets/lottie/Grocery.json',
-                                  fit: BoxFit.contain,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+        backgroundColor: AppColors.sageTop,
+        body: SafeArea(
+          top: false,
+          bottom: false,
+          child: Column(
+            children: [
+              _RegisterHeader(
+                titleToSubtitle: titleToSubtitle,
+                subtitleToIllustration: subtitleToIllustration,
+                illustrationHeight: illustrationHeight,
+                headerTopExtra: headerTopExtra,
+                headerBottomPadding: headerBottomPadding,
+                isCompact: isCompact,
+              ),
+              SizedBox(height: cardTopGap),
 
-                      // Form card
-                      Expanded(
-                        child: Container(
-                          width: double.infinity,
-                          clipBehavior: Clip.antiAlias,
-                          decoration: BoxDecoration(
-                            color: scheme.surface,
-                            borderRadius: const BorderRadius.only(
-                              topLeft: Radius.circular(34),
-                              topRight: Radius.circular(34),
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                blurRadius: 24,
-                                offset: const Offset(0, -10),
-                                color: Colors.black.withOpacity(0.10),
-                              ),
-                            ],
-                          ),
-                          child: Padding(
-                            padding: EdgeInsets.fromLTRB(
-                              20,
-                              18,
-                              20,
-                              26 + MediaQuery.of(context).padding.bottom,
-                            ),
-                            child: Form(
-                              key: _formKey,
-                              autovalidateMode: _submitted
-                                  ? AutovalidateMode.onUserInteraction
-                                  : AutovalidateMode.disabled,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  const SizedBox(height: 6),
-                                  const Text(
-                                    'Your details',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  _ValidatedInputField(
-                                    controller: _usernameCtrl,
-                                    icon: Icons.person_outline,
-                                    hintText: 'Username',
-                                    keyboardType: TextInputType.name,
-                                    validator: (v) {
-                                      final s = (v ?? '').trim();
-                                      if (s.isEmpty)
-                                        return 'Username is required';
-                                      if (s.length < 3)
-                                        return 'Username must be at least 3 characters';
-                                      return null;
-                                    },
-                                  ),
-                                  const SizedBox(height: 14),
-                                  _ValidatedInputField(
-                                    controller: _emailCtrl,
-                                    icon: Icons.mail_outline,
-                                    hintText: 'Email',
-                                    keyboardType: TextInputType.emailAddress,
-                                    validator: (v) {
-                                      final s = (v ?? '').trim();
-                                      if (s.isEmpty) return 'Email is required';
-                                      if (!_isValidEmail(s))
-                                        return 'Enter a valid email';
-                                      return null;
-                                    },
-                                  ),
-                                  const SizedBox(height: 14),
-                                  _ValidatedPasswordField(
-                                    controller: _passwordCtrl,
-                                    icon: Icons.lock_outline,
-                                    hintText: 'Password',
-                                    obscureText: obscurePassword,
-                                    onToggle: () => setState(
-                                      () => obscurePassword = !obscurePassword,
-                                    ),
-                                    validator: (v) {
-                                      final s = v ?? '';
-                                      if (s.isEmpty)
-                                        return 'Password is required';
-                                      if (s.length < 8)
-                                        return 'Password must be at least 8 characters';
-                                      final hasNumber = RegExp(
-                                        r'\d',
-                                      ).hasMatch(s);
-                                      if (!hasNumber)
-                                        return 'Password must include a number';
-                                      return null;
-                                    },
-                                  ),
-                                  const SizedBox(height: 14),
-                                  _ValidatedPasswordField(
-                                    controller: _confirmCtrl,
-                                    icon: Icons.lock_outline,
-                                    hintText: 'Confirm password',
-                                    obscureText: obscureConfirm,
-                                    onToggle: () => setState(
-                                      () => obscureConfirm = !obscureConfirm,
-                                    ),
-                                    validator: (v) {
-                                      final s = v ?? '';
-                                      if (s.isEmpty)
-                                        return 'Please confirm your password';
-                                      if (s != _passwordCtrl.text)
-                                        return 'Passwords do not match';
-                                      return null;
-                                    },
-                                  ),
-
-                                  const SizedBox(height: 12),
-                                  Row(
-                                    children: [
-                                      Checkbox(
-                                        value: agreeToTerms,
-                                        onChanged: (v) => setState(
-                                          () => agreeToTerms = v ?? false,
-                                        ),
-                                      ),
-                                      Expanded(
-                                        child: RichText(
-                                          text: TextSpan(
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .bodyMedium
-                                                ?.copyWith(
-                                                  color: scheme.onSurface
-                                                      .withOpacity(0.8),
-                                                ),
-                                            children: [
-                                              const TextSpan(
-                                                text: 'I agree to the ',
-                                              ),
-                                              TextSpan(
-                                                text: 'Terms',
-                                                style: TextStyle(
-                                                  color: scheme.primary,
-                                                  fontWeight: FontWeight.w700,
-                                                ),
-                                              ),
-                                              const TextSpan(text: ' and '),
-                                              TextSpan(
-                                                text: 'Privacy Policy',
-                                                style: TextStyle(
-                                                  color: scheme.primary,
-                                                  fontWeight: FontWeight.w700,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-
-                                  const SizedBox(height: 8),
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: FilledButton(
-                                      style: FilledButton.styleFrom(
-                                        backgroundColor: scheme.primary,
-                                        foregroundColor: scheme.onPrimary,
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 14,
-                                        ),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            16,
-                                          ),
-                                        ),
-                                      ),
-                                      onPressed: agreeToTerms
-                                          ? _createAccount
-                                          : null,
-                                      child: const Text('Create account'),
-                                    ),
-                                  ),
-
-                                  const SizedBox(height: 14),
-                                  Text(
-                                    'By creating an account you can share lists with family and sync in real time.',
-                                    textAlign: TextAlign.center,
-                                    style: Theme.of(context).textTheme.bodySmall
-                                        ?.copyWith(
-                                          color: scheme.onSurface.withOpacity(
-                                            0.65,
-                                          ),
-                                        ),
-                                  ),
-
-                                  const Spacer(),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const Text('Already have an account? '),
-                                      TextButton(
-                                        onPressed: () =>
-                                            Navigator.of(context).pop(),
-                                        child: const Text('Sign in'),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
+              // Form card
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  clipBehavior: Clip.antiAlias,
+                  decoration: const BoxDecoration(
+                    color: AppColors.white,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(28),
+                      topRight: Radius.circular(28),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        offset: Offset(0, 2),
+                        blurRadius: 12,
+                        color: Color(0x0D000000),
                       ),
                     ],
                   ),
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      24,
+                      cardInnerTop,
+                      24,
+                      6 + MediaQuery.of(context).padding.bottom,
+                    ),
+                    child: Form(
+                      key: _formKey,
+                      autovalidateMode: _submitted
+                          ? AutovalidateMode.onUserInteraction
+                          : AutovalidateMode.disabled,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.max,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Text(
+                            'Your details',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w400,
+                              color: AppColors.textSecondary,
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                          SizedBox(height: fieldGap),
+                          SizedBox(
+                            height: fieldHeight,
+                            child: ValidatedInputField(
+                              controller: _usernameCtrl,
+                              icon: Icons.person_outline,
+                              hintText: 'Username',
+                              keyboardType: TextInputType.name,
+                              validator: (v) {
+                                final s = (v ?? '').trim();
+                                if (s.isEmpty) return 'Username is required';
+                                if (s.length < 3) {
+                                  return 'Username must be at least 3 characters';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                          SizedBox(height: fieldGap),
+                          SizedBox(
+                            height: fieldHeight,
+                            child: ValidatedInputField(
+                              controller: _emailCtrl,
+                              icon: Icons.mail_outline,
+                              hintText: 'Email',
+                              keyboardType: TextInputType.emailAddress,
+                              validator: (v) {
+                                final s = (v ?? '').trim();
+                                if (s.isEmpty) return 'Email is required';
+                                if (!_isValidEmail(s))
+                                  return 'Enter a valid email';
+                                return null;
+                              },
+                            ),
+                          ),
+                          SizedBox(height: fieldGap),
+                          SizedBox(
+                            height: fieldHeight,
+                            child: ValidatedPasswordField(
+                              controller: _passwordCtrl,
+                              icon: Icons.lock_outline,
+                              hintText: 'Password',
+                              obscureText: obscurePassword,
+                              onToggle: () => setState(
+                                () => obscurePassword = !obscurePassword,
+                              ),
+                              validator: (v) {
+                                final s = v ?? '';
+                                if (s.isEmpty) return 'Password is required';
+                                if (s.length < 8) {
+                                  return 'Password must be at least 8 characters';
+                                }
+                                final hasNumber = RegExp(r'\\d').hasMatch(s);
+                                if (!hasNumber) {
+                                  return 'Password must include a number';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                          SizedBox(height: fieldGap),
+                          SizedBox(
+                            height: fieldHeight,
+                            child: ValidatedPasswordField(
+                              controller: _confirmCtrl,
+                              icon: Icons.lock_outline,
+                              hintText: 'Confirm password',
+                              obscureText: obscureConfirm,
+                              onToggle: () => setState(
+                                () => obscureConfirm = !obscureConfirm,
+                              ),
+                              validator: (v) {
+                                final s = v ?? '';
+                                if (s.isEmpty)
+                                  return 'Please confirm your password';
+                                if (s != _passwordCtrl.text) {
+                                  return 'Passwords do not match';
+                                }
+                                return null;
+                              },
+                            ),
+                          ),
+                          SizedBox(height: isCompact ? 10 : 12),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: Checkbox(
+                                  visualDensity: VisualDensity.compact,
+                                  materialTapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                  activeColor: AppColors.brandGreen,
+                                  value: agreeToTerms,
+                                  onChanged: (v) =>
+                                      setState(() => agreeToTerms = v ?? false),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text.rich(
+                                  TextSpan(
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
+                                          color: AppColors.legalSecondary,
+                                          height: 1.25,
+                                        ),
+                                    children: const [
+                                      TextSpan(text: 'I agree to the '),
+                                      TextSpan(
+                                        text: 'Terms of Service',
+                                        style: TextStyle(
+                                          color: AppColors.brandGreen,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      TextSpan(text: ' and '),
+                                      TextSpan(
+                                        text: 'Privacy Policy',
+                                        style: TextStyle(
+                                          color: AppColors.brandGreen,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.clip,
+                                  softWrap: true,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            width: double.infinity,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(999),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    offset: Offset(0, 4),
+                                    blurRadius: 12,
+                                    color: Color(0x0F000000),
+                                  ),
+                                ],
+                              ),
+                              child: FilledButton(
+                                style: ButtonStyle(
+                                  backgroundColor:
+                                      MaterialStateProperty.resolveWith((
+                                        states,
+                                      ) {
+                                        if (states.contains(
+                                          MaterialState.disabled,
+                                        )) {
+                                          return AppColors.brandGreen
+                                              .withOpacity(0.35);
+                                        }
+                                        if (states.contains(
+                                          MaterialState.pressed,
+                                        )) {
+                                          return AppColors.pressedGreen;
+                                        }
+                                        return AppColors.brandGreen;
+                                      }),
+                                  foregroundColor:
+                                      MaterialStateProperty.resolveWith(
+                                        (states) =>
+                                            states.contains(
+                                              MaterialState.disabled,
+                                            )
+                                            ? Colors.white.withOpacity(0.75)
+                                            : Colors.white,
+                                      ),
+                                  elevation: MaterialStateProperty.all<double>(
+                                    0,
+                                  ),
+                                  shape:
+                                      MaterialStateProperty.all<OutlinedBorder>(
+                                        const StadiumBorder(),
+                                      ),
+                                  padding:
+                                      MaterialStateProperty.all<
+                                        EdgeInsetsGeometry
+                                      >(
+                                        const EdgeInsets.symmetric(
+                                          vertical: 14,
+                                        ),
+                                      ),
+                                  minimumSize: MaterialStateProperty.all<Size>(
+                                    const Size.fromHeight(48),
+                                  ),
+                                ),
+                                onPressed: agreeToTerms ? _createAccount : null,
+                                child: const Text('Create account'),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'By creating an account you can share lists with family and sync in real time.',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: AppColors.footerText,
+                                  height: footerLineHeight,
+                                ),
+                          ),
+                          const SizedBox(height: 2),
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 6,
+                            children: [
+                              const Text('Already have an account?'),
+                              TextButton(
+                                style: TextButton.styleFrom(
+                                  foregroundColor: AppColors.brandGreen,
+                                  padding: EdgeInsets.zero,
+                                  minimumSize: Size.zero,
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: const Text('Sign in'),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            );
-          },
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _InputField extends StatelessWidget {
-  final IconData icon;
-  final String hintText;
-  final TextInputType? keyboardType;
+class _RegisterHeader extends StatelessWidget {
+  final double titleToSubtitle;
+  final double subtitleToIllustration;
+  final double illustrationHeight;
+  final double headerTopExtra;
+  final double headerBottomPadding;
+  final bool isCompact;
 
-  const _InputField({
-    required this.icon,
-    required this.hintText,
-    this.keyboardType,
+  const _RegisterHeader({
+    required this.titleToSubtitle,
+    required this.subtitleToIllustration,
+    required this.illustrationHeight,
+    required this.headerTopExtra,
+    required this.headerBottomPadding,
+    required this.isCompact,
   });
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return TextField(
-      keyboardType: keyboardType,
-      decoration: InputDecoration(
-        prefixIcon: Icon(icon),
-        hintText: hintText,
-        filled: true,
-        fillColor: scheme.surface,
-        contentPadding: const EdgeInsets.symmetric(vertical: 16),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: scheme.outlineVariant),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: scheme.primary, width: 1.6),
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.fromLTRB(
+        24,
+        MediaQuery.of(context).padding.top + headerTopExtra,
+        24,
+        headerBottomPadding,
+      ),
+      decoration: const BoxDecoration(
+        color: AppColors.sageTop,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(32),
+          bottomRight: Radius.circular(32),
         ),
       ),
-    );
-  }
-}
-
-class _PasswordField extends StatelessWidget {
-  final IconData icon;
-  final String hintText;
-  final bool obscureText;
-  final VoidCallback onToggle;
-
-  const _PasswordField({
-    required this.icon,
-    required this.hintText,
-    required this.obscureText,
-    required this.onToggle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return TextField(
-      obscureText: obscureText,
-      decoration: InputDecoration(
-        prefixIcon: Icon(icon),
-        hintText: hintText,
-        suffixIcon: IconButton(
-          onPressed: onToggle,
-          icon: Icon(obscureText ? Icons.visibility_off : Icons.visibility),
-        ),
-        filled: true,
-        fillColor: scheme.surface,
-        contentPadding: const EdgeInsets.symmetric(vertical: 16),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: scheme.outlineVariant),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: scheme.primary, width: 1.6),
-        ),
-      ),
-    );
-  }
-}
-
-class _ValidatedInputField extends StatelessWidget {
-  final TextEditingController controller;
-  final IconData icon;
-  final String hintText;
-  final TextInputType? keyboardType;
-  final String? Function(String?)? validator;
-
-  const _ValidatedInputField({
-    required this.controller,
-    required this.icon,
-    required this.hintText,
-    this.keyboardType,
-    this.validator,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return TextFormField(
-      controller: controller,
-      keyboardType: keyboardType,
-      validator: validator,
-      decoration: InputDecoration(
-        prefixIcon: Icon(icon),
-        hintText: hintText,
-        filled: true,
-        fillColor: scheme.surface,
-        contentPadding: const EdgeInsets.symmetric(vertical: 16),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: scheme.outlineVariant),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: scheme.primary, width: 1.6),
-        ),
-      ),
-    );
-  }
-}
-
-class _ValidatedPasswordField extends StatelessWidget {
-  final TextEditingController controller;
-  final IconData icon;
-  final String hintText;
-  final bool obscureText;
-  final VoidCallback onToggle;
-  final String? Function(String?)? validator;
-
-  const _ValidatedPasswordField({
-    required this.controller,
-    required this.icon,
-    required this.hintText,
-    required this.obscureText,
-    required this.onToggle,
-    this.validator,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return TextFormField(
-      controller: controller,
-      obscureText: obscureText,
-      validator: validator,
-      decoration: InputDecoration(
-        prefixIcon: Icon(icon),
-        hintText: hintText,
-        suffixIcon: IconButton(
-          onPressed: onToggle,
-          icon: Icon(obscureText ? Icons.visibility_off : Icons.visibility),
-        ),
-        filled: true,
-        fillColor: scheme.surface,
-        contentPadding: const EdgeInsets.symmetric(vertical: 16),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: scheme.outlineVariant),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: scheme.primary, width: 1.6),
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              IconButton(
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                color: AppColors.textPrimary,
+              ),
+              const Spacer(),
+              const Text(
+                'Create account',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.3,
+                ),
+              ),
+              const Spacer(),
+              const SizedBox(width: 48),
+            ],
+          ),
+          SizedBox(height: titleToSubtitle),
+          const Text(
+            'Start your shared grocery list in under a minute.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          SizedBox(height: subtitleToIllustration),
+          Center(
+            child: SizedBox(
+              height: illustrationHeight,
+              child: Transform.translate(
+                offset: Offset(0, isCompact ? 6 : 10),
+                child: Lottie.asset(
+                  'assets/lottie/Grocery.json',
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
