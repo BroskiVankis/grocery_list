@@ -163,12 +163,12 @@ class _ListDetailHeader extends StatelessWidget {
                       children: [
                         Icon(
                           Icons.delete_outline,
-                          color: AppColors.pressedGreen,
+                          color: AppColors.textPrimary,
                         ),
                         SizedBox(width: 10),
                         Text(
                           'Delete list',
-                          style: TextStyle(color: AppColors.pressedGreen),
+                          style: TextStyle(color: AppColors.textPrimary),
                         ),
                       ],
                     ),
