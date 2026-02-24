@@ -82,13 +82,14 @@ class ListDetailBody extends StatelessWidget {
           // Header
           if (i == cursor) {
             return Padding(
-              padding: const EdgeInsets.fromLTRB(16, 18, 16, 6),
+              padding: const EdgeInsets.fromLTRB(16, 24, 16, 2),
               child: Text(
-                c,
+                c.toUpperCase(),
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.3,
-                  color: AppColors.textPrimary,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1.0,
+                  color: AppColors.textSecondary.withOpacity(0.78),
                 ),
               ),
             );
@@ -102,6 +103,8 @@ class ListDetailBody extends StatelessWidget {
             final item = list[localIndex];
             return GroceryItemTile(
               name: item.name,
+              quantity: item.quantity ?? 1,
+              unit: item.unit,
               onTapRemove: () => onRemoveByItemId(item.id),
             );
           }

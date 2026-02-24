@@ -26,6 +26,8 @@ class ListDetailPage extends StatefulWidget {
 class _ListDetailPageState extends State<ListDetailPage> {
   final UndoRemove<GroceryItem> _undo = UndoRemove<GroceryItem>();
 
+  String _normalizeItemName(String value) => value.trim().toLowerCase();
+
   Future<void> _renameList() async {
     final controller = TextEditingController(text: widget.list.name);
 
@@ -157,38 +159,61 @@ class _ListDetailPageState extends State<ListDetailPage> {
         onRename: _renameList,
         onDelete: _deleteList,
       ),
-      floatingActionButton: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(999),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x1F000000),
-              blurRadius: 20,
-              offset: Offset(0, 6),
-            ),
-          ],
-        ),
-        child: FloatingActionButton(
-          elevation: 0,
-          highlightElevation: 0,
-          onPressed: () => showAddItemSheet(
-            context: context,
-            onAdd: (text) {
-              setState(() {
-                widget.list.items.add(
-                  GroceryItem(
-                    id: DateTime.now().microsecondsSinceEpoch.toString(),
-                    name: text,
-                    category: categoryForItem(text),
-                  ),
-                );
-              });
-              widget.onChanged();
-            },
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(right: 4),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.18),
+                blurRadius: 12,
+                offset: Offset(0, 6),
+              ),
+            ],
           ),
-          backgroundColor: AppColors.brandGreen,
-          foregroundColor: AppColors.white,
-          child: const Icon(Icons.add),
+          child: FloatingActionButton(
+            elevation: 0,
+            highlightElevation: 0,
+            onPressed: () => showAddItemSheet(
+              context: context,
+              onAdd: (text, quantity, unit) {
+                setState(() {
+                  final normalizedName = _normalizeItemName(text);
+                  final existingIndex = widget.list.items.indexWhere(
+                    (item) =>
+                        _normalizeItemName(item.name) == normalizedName &&
+                        item.unit == unit,
+                  );
+
+                  if (existingIndex != -1) {
+                    final existingItem = widget.list.items[existingIndex];
+                    widget.list.items[existingIndex] = GroceryItem(
+                      id: existingItem.id,
+                      name: existingItem.name,
+                      category: existingItem.category,
+                      unit: existingItem.unit,
+                      quantity: (existingItem.quantity ?? 1) + quantity,
+                    );
+                  } else {
+                    widget.list.items.add(
+                      GroceryItem(
+                        id: DateTime.now().microsecondsSinceEpoch.toString(),
+                        name: text,
+                        category: categoryForItem(text),
+                        unit: unit,
+                        quantity: quantity,
+                      ),
+                    );
+                  }
+                });
+                widget.onChanged();
+              },
+            ),
+            backgroundColor: AppColors.brandGreen,
+            foregroundColor: AppColors.white,
+            child: const Icon(Icons.add),
+          ),
         ),
       ),
       body: ListDetailBody(
