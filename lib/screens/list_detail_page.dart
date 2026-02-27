@@ -5,6 +5,7 @@ import '../theme/app_colors.dart';
 import '../utils/group_items.dart';
 import '../utils/item_category.dart';
 import '../utils/undo_remove.dart';
+import '../widgets/common/app_floating_action_button.dart';
 import '../widgets/sheets/add_item_sheet.dart';
 import '../widgets/list_detail/list_detail_app_bar.dart';
 import '../widgets/list_detail/list_detail_body.dart';
@@ -161,58 +162,44 @@ class _ListDetailPageState extends State<ListDetailPage> {
       ),
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(right: 4),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(999),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.18),
-                blurRadius: 12,
-                offset: Offset(0, 6),
-              ),
-            ],
-          ),
-          child: FloatingActionButton(
-            elevation: 0,
-            highlightElevation: 0,
-            onPressed: () => showAddItemSheet(
-              context: context,
-              onAdd: (text, quantity, unit) {
-                setState(() {
-                  final normalizedName = _normalizeItemName(text);
-                  final existingIndex = widget.list.items.indexWhere(
-                    (item) =>
-                        _normalizeItemName(item.name) == normalizedName &&
-                        item.unit == unit,
-                  );
+        child: AppFloatingActionButton(
+          shadowColor: Colors.black.withOpacity(0.18),
+          shadowBlur: 12,
+          shadowOffset: const Offset(0, 6),
+          onPressed: () => showAddItemSheet(
+            context: context,
+            onAdd: (text, quantity, unit) {
+              setState(() {
+                final normalizedName = _normalizeItemName(text);
+                final existingIndex = widget.list.items.indexWhere(
+                  (item) =>
+                      _normalizeItemName(item.name) == normalizedName &&
+                      item.unit == unit,
+                );
 
-                  if (existingIndex != -1) {
-                    final existingItem = widget.list.items[existingIndex];
-                    widget.list.items[existingIndex] = GroceryItem(
-                      id: existingItem.id,
-                      name: existingItem.name,
-                      category: existingItem.category,
-                      unit: existingItem.unit,
-                      quantity: (existingItem.quantity ?? 1) + quantity,
-                    );
-                  } else {
-                    widget.list.items.add(
-                      GroceryItem(
-                        id: DateTime.now().microsecondsSinceEpoch.toString(),
-                        name: text,
-                        category: categoryForItem(text),
-                        unit: unit,
-                        quantity: quantity,
-                      ),
-                    );
-                  }
-                });
-                widget.onChanged();
-              },
-            ),
-            backgroundColor: AppColors.brandGreen,
-            foregroundColor: AppColors.white,
-            child: const Icon(Icons.add),
+                if (existingIndex != -1) {
+                  final existingItem = widget.list.items[existingIndex];
+                  widget.list.items[existingIndex] = GroceryItem(
+                    id: existingItem.id,
+                    name: existingItem.name,
+                    category: existingItem.category,
+                    unit: existingItem.unit,
+                    quantity: (existingItem.quantity ?? 1) + quantity,
+                  );
+                } else {
+                  widget.list.items.add(
+                    GroceryItem(
+                      id: DateTime.now().microsecondsSinceEpoch.toString(),
+                      name: text,
+                      category: categoryForItem(text),
+                      unit: unit,
+                      quantity: quantity,
+                    ),
+                  );
+                }
+              });
+              widget.onChanged();
+            },
           ),
         ),
       ),
