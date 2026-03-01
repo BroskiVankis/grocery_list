@@ -1,7 +1,19 @@
 import 'package:flutter/material.dart';
 
+import '../models/meal_slot.dart';
 import '../models/recipe_model.dart';
 import '../theme/app_colors.dart';
+import '../utils/meal_plan_logic.dart';
+import '../utils/meal_plan_ui_logic.dart';
+import '../widgets/meal_plan/add_meal_sheet.dart';
+import '../widgets/meal_plan/day_picker_sheet.dart';
+import '../widgets/meal_plan/empty_week_banner.dart';
+import '../widgets/meal_plan/floating_grocery_button.dart';
+import '../widgets/meal_plan/jump_to_today_chip.dart';
+import '../widgets/meal_plan/meal_day_card.dart';
+import '../widgets/meal_plan/meal_actions_sheet.dart';
+import '../widgets/meal_plan/meal_type_picker_sheet.dart';
+import '../widgets/meal_plan/week_header.dart';
 import 'recipe_details_page.dart';
 
 class MealPlanPage extends StatefulWidget {
@@ -13,7 +25,8 @@ class MealPlanPage extends StatefulWidget {
 
 class _MealPlanPageState extends State<MealPlanPage> {
   final ScrollController _scrollController = ScrollController();
-  final Map<DateTime, RecipeModel> _plannedMeals = <DateTime, RecipeModel>{};
+  Map<DateTime, Object?> _plannedMeals = <DateTime, Object?>{};
+  final Set<DateTime> _expandedMealDays = <DateTime>{};
   final List<GlobalKey> _dayKeys = List<GlobalKey>.generate(
     7,
     (_) => GlobalKey(),
@@ -25,11 +38,13 @@ class _MealPlanPageState extends State<MealPlanPage> {
   double _weekContentSlideOffsetX = 0;
   bool _showHeader = true;
   bool _showBottomGroceryButton = false;
+  bool _showJumpToToday = false;
 
   @override
   void initState() {
     super.initState();
     _today = _dateOnly(DateTime.now());
+    _plannedMeals = <DateTime, Object?>{};
     _seedInitialWeekMeals();
     _scrollController.addListener(_onScrollEffects);
 
@@ -51,26 +66,50 @@ class _MealPlanPageState extends State<MealPlanPage> {
 
     final offset = _scrollController.offset;
     final maxExtent = _scrollController.position.maxScrollExtent;
-    final nextShowHeader = offset <= 36;
-    final nextShowBottom = (maxExtent - offset) <= 16;
+    final resolved = MealPlanUiLogic.resolveScrollUiState(
+      offset: offset,
+      maxExtent: maxExtent,
+      weekOffset: _weekOffset,
+      isTodayVisibleInViewport: _isTodayVisibleInViewport(),
+    );
 
-    if (nextShowHeader == _showHeader &&
-        nextShowBottom == _showBottomGroceryButton) {
+    if (resolved.showHeader == _showHeader &&
+        resolved.showBottomGroceryButton == _showBottomGroceryButton &&
+        resolved.showJumpToToday == _showJumpToToday) {
       return;
     }
 
     setState(() {
-      _showHeader = nextShowHeader;
-      _showBottomGroceryButton = nextShowBottom;
+      _showHeader = resolved.showHeader;
+      _showBottomGroceryButton = resolved.showBottomGroceryButton;
+      _showJumpToToday = resolved.showJumpToToday;
     });
   }
 
-  DateTime _dateOnly(DateTime date) =>
-      DateTime(date.year, date.month, date.day);
+  bool _isTodayVisibleInViewport() {
+    if (_weekOffset != 0) return false;
+
+    final days = _visibleWeekDays;
+    final index = days.indexWhere((day) => _isSameDate(day, _today));
+    if (index == -1) return false;
+
+    final context = _dayKeys[index].currentContext;
+    if (context == null) return false;
+
+    final renderObject = context.findRenderObject();
+    if (renderObject is! RenderBox || !renderObject.hasSize) return false;
+
+    final topLeft = renderObject.localToGlobal(Offset.zero);
+    final bottomY = topLeft.dy + renderObject.size.height;
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    return bottomY >= 0 && topLeft.dy <= screenHeight;
+  }
+
+  DateTime _dateOnly(DateTime date) => MealPlanLogic.dateOnly(date);
 
   DateTime _startOfWeek(DateTime date) {
-    final normalized = _dateOnly(date);
-    return normalized.subtract(Duration(days: normalized.weekday - 1));
+    return MealPlanLogic.startOfWeek(date);
   }
 
   DateTime get _visibleWeekStart {
@@ -87,7 +126,24 @@ class _MealPlanPageState extends State<MealPlanPage> {
   }
 
   bool _isSameDate(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
+    return MealPlanLogic.isSameDate(a, b);
+  }
+
+  Map<MealSlot, RecipeModel>? _readDayMeals(DateTime day) {
+    return MealPlanLogic.readDayMeals(plannedMeals: _plannedMeals, day: day);
+  }
+
+  Map<MealSlot, RecipeModel> _ensureDayMeals(DateTime day) {
+    return MealPlanLogic.ensureDayMeals(plannedMeals: _plannedMeals, day: day);
+  }
+
+  void _removeMealSlot(DateTime day, MealSlot slot) {
+    MealPlanLogic.removeMealSlot(
+      plannedMeals: _plannedMeals,
+      expandedMealDays: _expandedMealDays,
+      day: day,
+      slot: slot,
+    );
   }
 
   void _seedInitialWeekMeals() {
@@ -97,59 +153,73 @@ class _MealPlanPageState extends State<MealPlanPage> {
       return sampleRecipes.firstWhere((recipe) => recipe.id == id);
     }
 
-    _plannedMeals[_dateOnly(start.add(const Duration(days: 1)))] = recipeById(
-      'garlic-butter-pasta',
-    );
-    _plannedMeals[_dateOnly(start.add(const Duration(days: 2)))] = recipeById(
-      'greek-salad-bowl',
-    );
-    _plannedMeals[_dateOnly(start.add(const Duration(days: 4)))] = recipeById(
-      'chicken-rice-skillet',
-    );
-  }
-
-  String _monthShort(int month) {
-    const months = <String>[
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return months[month - 1];
+    _plannedMeals[_dateOnly(start.add(const Duration(days: 1)))] = {
+      MealSlot.dinner: recipeById('garlic-butter-pasta'),
+    };
+    _plannedMeals[_dateOnly(start.add(const Duration(days: 2)))] = {
+      MealSlot.dinner: recipeById('greek-salad-bowl'),
+    };
+    _plannedMeals[_dateOnly(start.add(const Duration(days: 4)))] = {
+      MealSlot.dinner: recipeById('chicken-rice-skillet'),
+    };
   }
 
   String _weekdayUpper(DateTime date) {
-    const days = <String>[
-      'MONDAY',
-      'TUESDAY',
-      'WEDNESDAY',
-      'THURSDAY',
-      'FRIDAY',
-      'SATURDAY',
-      'SUNDAY',
-    ];
-    return days[date.weekday - 1];
+    return MealPlanLogic.weekdayUpper(date);
   }
 
   String _weekRangeLabel(DateTime weekStart) {
-    final weekEnd = weekStart.add(const Duration(days: 6));
-    final start = '${_monthShort(weekStart.month)} ${weekStart.day}';
-    final end = '${_monthShort(weekEnd.month)} ${weekEnd.day}';
-    return '$start – $end';
+    return MealPlanLogic.weekRangeLabel(weekStart);
   }
 
   int get _visibleWeekPlannedCount {
-    return _visibleWeekDays
-        .where((day) => _plannedMeals.containsKey(_dateOnly(day)))
-        .length;
+    return MealPlanLogic.visibleWeekPlannedCount(
+      days: _visibleWeekDays,
+      plannedMeals: _plannedMeals,
+    );
+  }
+
+  int get _visibleWeekMealCount {
+    return MealPlanLogic.visibleWeekMealCount(
+      days: _visibleWeekDays,
+      plannedMeals: _plannedMeals,
+    );
+  }
+
+  String _mealSlotLabel(MealSlot slot) {
+    return MealPlanLogic.mealSlotLabel(slot);
+  }
+
+  String _addMealSlotLabel(MealSlot slot) {
+    return MealPlanLogic.addMealSlotLabel(slot);
+  }
+
+  String _dayMealCountLabel(int count) {
+    return MealPlanLogic.dayMealCountLabel(count);
+  }
+
+  void _expandExtraMeals(DateTime day) {
+    setState(() {
+      _expandedMealDays.add(_dateOnly(day));
+    });
+  }
+
+  RecipeModel _pickQuickRecipe(String quickKey) {
+    return MealPlanLogic.pickQuickRecipe(
+      quickKey: quickKey,
+      today: _today,
+      plannedMeals: _plannedMeals,
+    );
+  }
+
+  void _applyQuickTodayAction(String quickKey) {
+    final day = _dateOnly(_today);
+    final recipe = _pickQuickRecipe(quickKey);
+
+    setState(() {
+      final meals = _ensureDayMeals(day);
+      meals[MealSlot.dinner] = recipe;
+    });
   }
 
   void _goToPreviousWeek() {
@@ -164,7 +234,9 @@ class _MealPlanPageState extends State<MealPlanPage> {
     setState(() {
       _weekOffset += delta;
       _weekLabelDirection = delta;
-      _weekContentSlideOffsetX = delta > 0 ? 0.06 : -0.06;
+      _weekContentSlideOffsetX = MealPlanUiLogic.weekContentSlideOffsetForDelta(
+        delta,
+      );
     });
     _afterWeekChanged();
 
@@ -193,9 +265,9 @@ class _MealPlanPageState extends State<MealPlanPage> {
 
   void _onHorizontalDragEnd(DragEndDetails details) {
     final velocity = details.primaryVelocity ?? 0;
-    if (velocity <= -350) {
+    if (MealPlanUiLogic.shouldGoToNextWeek(velocity)) {
       _goToNextWeek();
-    } else if (velocity >= 350) {
+    } else if (MealPlanUiLogic.shouldGoToPreviousWeek(velocity)) {
       _goToPreviousWeek();
     }
   }
@@ -216,265 +288,90 @@ class _MealPlanPageState extends State<MealPlanPage> {
     );
   }
 
-  Future<void> _showAddMealSheet(DateTime date) async {
-    final selected = await showModalBottomSheet<RecipeModel>(
+  MealSlot _suggestMealSlotForDay(
+    DateTime day, {
+    MealSlot fallback = MealSlot.dinner,
+  }) {
+    return MealPlanLogic.suggestMealSlotForDay(
+      day: day,
+      plannedMeals: _plannedMeals,
+      fallback: fallback,
+    );
+  }
+
+  Future<MealSlot?> _showMealTypePickerSheet({
+    required DateTime day,
+    MealSlot preferred = MealSlot.dinner,
+  }) {
+    final meals =
+        _readDayMeals(_dateOnly(day)) ?? const <MealSlot, RecipeModel>{};
+    final suggested = _suggestMealSlotForDay(day, fallback: preferred);
+
+    return MealTypePickerSheet.show(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.sheetSurface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (sheetContext) {
-        final searchController = TextEditingController();
-        String query = '';
+      meals: meals,
+      suggested: suggested,
+      labelBuilder: _mealSlotLabel,
+    );
+  }
 
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            final filtered = sampleRecipes.where((recipe) {
-              if (query.trim().isEmpty) return true;
-              final q = query.trim().toLowerCase();
-              if (recipe.title.toLowerCase().contains(q)) return true;
-              return recipe.ingredients.any(
-                (ingredient) => ingredient.toLowerCase().contains(q),
-              );
-            }).toList();
+  Future<void> _showAddMealFlow({
+    required DateTime day,
+    MealSlot preferredSlot = MealSlot.dinner,
+  }) async {
+    final slot = await _showMealTypePickerSheet(
+      day: day,
+      preferred: preferredSlot,
+    );
+    if (!mounted || slot == null) return;
 
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                top: 12,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 18,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 44,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: 12),
-                    decoration: BoxDecoration(
-                      color: AppColors.sheetHandle,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Add Meal',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: searchController,
-                    cursorColor: AppColors.brandGreen,
-                    onChanged: (value) {
-                      setSheetState(() {
-                        query = value;
-                      });
-                    },
-                    decoration: InputDecoration(
-                      hintText: 'Search recipes...',
-                      hintStyle: const TextStyle(
-                        color: AppColors.textSecondary,
-                      ),
-                      prefixIcon: const Icon(
-                        Icons.search,
-                        color: AppColors.textSecondary,
-                      ),
-                      filled: true,
-                      fillColor: AppColors.inputBg,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(
-                          color: AppColors.inputBorderSoft,
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(14),
-                        borderSide: const BorderSide(
-                          color: AppColors.brandGreen,
-                          width: 1.8,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Flexible(
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      itemCount: filtered.length,
-                      separatorBuilder: (_, __) => const Divider(
-                        height: 1,
-                        color: AppColors.inputBorder,
-                      ),
-                      itemBuilder: (context, index) {
-                        final recipe = filtered[index];
-                        return ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 2,
-                            vertical: 2,
-                          ),
-                          leading: Container(
-                            width: 38,
-                            height: 38,
-                            decoration: BoxDecoration(
-                              color: AppColors.brandGreen.withOpacity(0.085),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            alignment: Alignment.center,
-                            child: Icon(
-                              recipe.icon,
-                              color: AppColors.brandGreen,
-                              size: 20,
-                            ),
-                          ),
-                          title: Text(
-                            recipe.title,
-                            style: const TextStyle(
-                              color: AppColors.textPrimary,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          subtitle: Text(
-                            '⏱ ${recipe.duration} • ${recipe.difficulty}',
-                            style: const TextStyle(
-                              color: AppColors.textSecondary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          onTap: () => Navigator.of(sheetContext).pop(recipe),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
+    await _showAddMealSheet(date: day, slot: slot);
+  }
+
+  Future<void> _showAddMealSheet({
+    required DateTime date,
+    required MealSlot slot,
+  }) async {
+    final selected = await AddMealSheet.show(
+      context: context,
+      title: _addMealSlotLabel(slot),
     );
 
     if (!mounted || selected == null) return;
 
     setState(() {
-      _plannedMeals[_dateOnly(date)] = selected;
+      final day = _dateOnly(date);
+      final meals = _ensureDayMeals(day);
+      meals[slot] = selected;
+      if (slot != MealSlot.dinner) {
+        _expandedMealDays.add(day);
+      }
     });
   }
 
   Future<DateTime?> _showDayPickerSheet({required DateTime currentDay}) async {
-    final days = _visibleWeekDays;
-    return showModalBottomSheet<DateTime>(
+    return DayPickerSheet.show(
       context: context,
-      backgroundColor: AppColors.sheetSurface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 44,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: AppColors.sheetHandle,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-              ),
-              Text(
-                'Choose day',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 8),
-              for (final day in days)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(
-                    _weekdayUpper(day),
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  trailing: _isSameDate(day, currentDay)
-                      ? const Icon(Icons.check, color: AppColors.brandGreen)
-                      : null,
-                  onTap: () => Navigator.of(context).pop(day),
-                ),
-            ],
-          ),
-        );
-      },
+      days: _visibleWeekDays,
+      currentDay: currentDay,
+      weekdayLabel: _weekdayUpper,
+      isSameDate: _isSameDate,
     );
   }
 
-  Future<void> _showMealActions(DateTime day, RecipeModel recipe) async {
-    final action = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: AppColors.sheetSurface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 44,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: AppColors.sheetHandle,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-              ),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.open_with),
-                title: const Text('Move'),
-                onTap: () => Navigator.of(context).pop('move'),
-              ),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.event_repeat),
-                title: const Text('Change day'),
-                onTap: () => Navigator.of(context).pop('change_day'),
-              ),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.delete_outline),
-                title: const Text('Remove'),
-                onTap: () => Navigator.of(context).pop('remove'),
-              ),
-            ],
-          ),
-        );
-      },
-    );
+  Future<void> _showMealActions(
+    DateTime day,
+    MealSlot slot,
+    RecipeModel recipe,
+  ) async {
+    final action = await MealActionsSheet.show(context: context);
 
     if (!mounted || action == null) return;
 
     if (action == 'remove') {
       setState(() {
-        _plannedMeals.remove(_dateOnly(day));
+        final dateKey = _dateOnly(day);
+        _removeMealSlot(dateKey, slot);
       });
       return;
     }
@@ -486,8 +383,16 @@ class _MealPlanPageState extends State<MealPlanPage> {
       }
 
       setState(() {
-        _plannedMeals.remove(_dateOnly(day));
-        _plannedMeals[_dateOnly(destination)] = recipe;
+        final origin = _dateOnly(day);
+        final target = _dateOnly(destination);
+
+        _removeMealSlot(origin, slot);
+
+        final destinationMeals = _ensureDayMeals(target);
+        destinationMeals[slot] = recipe;
+        if (slot != MealSlot.dinner) {
+          _expandedMealDays.add(target);
+        }
       });
     }
   }
@@ -509,424 +414,111 @@ class _MealPlanPageState extends State<MealPlanPage> {
     final weekStart = _visibleWeekStart;
     final days = _visibleWeekDays;
     final plannedCount = _visibleWeekPlannedCount;
+    final totalMeals = _visibleWeekMealCount;
 
     return Scaffold(
       backgroundColor: AppColors.sageTop,
       body: SafeArea(
         child: GestureDetector(
           onHorizontalDragEnd: _onHorizontalDragEnd,
-          child: CustomScrollView(
-            controller: _scrollController,
-            slivers: [
-              SliverToBoxAdapter(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 220),
-                  switchInCurve: Curves.easeOut,
-                  switchOutCurve: Curves.easeOut,
-                  transitionBuilder: (child, animation) {
-                    return FadeTransition(
-                      opacity: animation,
-                      child: SizeTransition(
-                        sizeFactor: animation,
-                        axisAlignment: -1,
-                        child: child,
-                      ),
-                    );
-                  },
-                  child: _showHeader
-                      ? _WeekHeader(
-                          key: const ValueKey('week-header-visible'),
-                          weekRangeLabel: _weekRangeLabel(weekStart),
-                          plannedCount: plannedCount,
-                          labelDirection: _weekLabelDirection,
-                          onPreviousWeek: _goToPreviousWeek,
-                          onNextWeek: _goToNextWeek,
-                        )
-                      : const SizedBox.shrink(
-                          key: ValueKey('week-header-hidden'),
-                        ),
-                ),
-              ),
-              if (plannedCount == 0)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.inputBorder),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text(
-                            'Plan your week 🍽',
-                            style: TextStyle(
-                              color: AppColors.textPrimary,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            'Add meals to generate a grocery list.',
-                            style: TextStyle(
-                              color: AppColors.textSecondary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                sliver: SliverList.separated(
-                  itemCount: days.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (context, index) {
-                    final day = days[index];
-                    final planned = _plannedMeals[_dateOnly(day)];
-                    final isToday = _isSameDate(day, _today);
-
-                    return AnimatedSlide(
-                      duration: const Duration(milliseconds: 200),
-                      curve: Curves.easeOut,
-                      offset: Offset(_weekContentSlideOffsetX, 0),
-                      child: Container(
-                        key: _dayKeys[index],
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: isToday
-                              ? AppColors.brandGreen.withOpacity(0.035)
-                              : AppColors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppColors.inputBorder),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  _weekdayUpper(day),
-                                  style: const TextStyle(
-                                    color: AppColors.textPrimary,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 0.2,
-                                  ),
-                                ),
-                                if (isToday) ...[
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    width: 7,
-                                    height: 7,
-                                    decoration: const BoxDecoration(
-                                      color: AppColors.brandGreen,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Today',
-                                    style: TextStyle(
-                                      color: AppColors.brandGreen.withOpacity(
-                                        0.9,
-                                      ),
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 180),
-                              switchInCurve: Curves.easeOut,
-                              switchOutCurve: Curves.easeOut,
-                              transitionBuilder: (child, animation) {
-                                return FadeTransition(
-                                  opacity: animation,
-                                  child: SlideTransition(
-                                    position: Tween<Offset>(
-                                      begin: const Offset(0, 0.08),
-                                      end: Offset.zero,
-                                    ).animate(animation),
-                                    child: child,
-                                  ),
-                                );
-                              },
-                              child: planned == null
-                                  ? OutlinedButton.icon(
-                                      key: ValueKey<String>(
-                                        'empty-${day.toIso8601String()}',
-                                      ),
-                                      onPressed: () => _showAddMealSheet(day),
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor: AppColors.brandGreen,
-                                        side: BorderSide(
-                                          color: AppColors.brandGreen
-                                              .withOpacity(0.28),
-                                        ),
-                                        minimumSize: const Size.fromHeight(44),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                        ),
-                                      ),
-                                      icon: const Icon(Icons.add),
-                                      label: const Text('Add meal'),
-                                    )
-                                  : _MealCard(
-                                      key: ValueKey<String>(
-                                        'meal-${day.toIso8601String()}-${planned.id}',
-                                      ),
-                                      recipe: planned,
-                                      onTap: () => _openRecipe(planned),
-                                      onLongPress: () =>
-                                          _showMealActions(day, planned),
-                                    ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    16,
-                    0,
-                    16,
-                    MediaQuery.of(context).padding.bottom + 18,
-                  ),
-                  child: AnimatedOpacity(
-                    duration: const Duration(milliseconds: 220),
-                    curve: Curves.easeOut,
-                    opacity: _showBottomGroceryButton ? 1 : 0,
-                    child: AnimatedSlide(
+          child: Stack(
+            children: [
+              CustomScrollView(
+                controller: _scrollController,
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 220),
-                      curve: Curves.easeOut,
-                      offset: _showBottomGroceryButton
-                          ? Offset.zero
-                          : const Offset(0, 0.06),
-                      child: IgnorePointer(
-                        ignoring: !_showBottomGroceryButton,
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: _generateGroceryList,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.brandGreen,
-                              foregroundColor: AppColors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                            ),
-                            icon: const Icon(Icons.shopping_cart_outlined),
-                            label: const Text(
-                              'Generate Grocery List',
-                              style: TextStyle(fontWeight: FontWeight.w700),
-                            ),
+                      switchInCurve: Curves.easeOut,
+                      switchOutCurve: Curves.easeOut,
+                      transitionBuilder: (child, animation) {
+                        return FadeTransition(
+                          opacity: animation,
+                          child: SizeTransition(
+                            sizeFactor: animation,
+                            axisAlignment: -1,
+                            child: child,
                           ),
-                        ),
-                      ),
+                        );
+                      },
+                      child: _showHeader
+                          ? WeekHeader(
+                              key: const ValueKey('week-header-visible'),
+                              weekRangeLabel: _weekRangeLabel(weekStart),
+                              plannedCount: plannedCount,
+                              totalMeals: totalMeals,
+                              labelDirection: _weekLabelDirection,
+                              onPreviousWeek: _goToPreviousWeek,
+                              onNextWeek: _goToNextWeek,
+                            )
+                          : const SizedBox.shrink(
+                              key: ValueKey('week-header-hidden'),
+                            ),
                     ),
                   ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
+                  if (plannedCount == 0)
+                    const SliverToBoxAdapter(child: EmptyWeekBanner()),
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                    sliver: SliverList.separated(
+                      itemCount: days.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 18),
+                      itemBuilder: (context, index) {
+                        final day = days[index];
+                        final dayKey = _dateOnly(day);
+                        final dayMeals =
+                            _readDayMeals(dayKey) ??
+                            const <MealSlot, RecipeModel>{};
+                        final isToday = _isSameDate(day, _today);
 
-class _WeekHeader extends StatelessWidget {
-  const _WeekHeader({
-    super.key,
-    required this.weekRangeLabel,
-    required this.plannedCount,
-    required this.labelDirection,
-    required this.onPreviousWeek,
-    required this.onNextWeek,
-  });
-
-  final String weekRangeLabel;
-  final int plannedCount;
-  final int labelDirection;
-  final VoidCallback onPreviousWeek;
-  final VoidCallback onNextWeek;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.sageTop,
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.inputBorder),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'This Week',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w900,
+                        return MealDayCard(
+                          dayKey: _dayKeys[index],
+                          day: day,
+                          dayMeals: dayMeals,
+                          isToday: isToday,
+                          isExpanded: _expandedMealDays.contains(dayKey),
+                          weekContentSlideOffsetX: _weekContentSlideOffsetX,
+                          weekdayLabel: _weekdayUpper,
+                          dayMealCountLabel: _dayMealCountLabel,
+                          mealSlotLabel: _mealSlotLabel,
+                          addMealSlotLabel: _addMealSlotLabel,
+                          onExpandExtraMeals: () => _expandExtraMeals(day),
+                          onQuickTodayAction: _applyQuickTodayAction,
+                          onAddMealFlowDinner: () => _showAddMealFlow(
+                            day: day,
+                            preferredSlot: MealSlot.dinner,
+                          ),
+                          onAddMeal: (slot) =>
+                              _showAddMealSheet(date: day, slot: slot),
+                          onOpenRecipe: _openRecipe,
+                          onMealLongPress: (slot, recipe) =>
+                              _showMealActions(day, slot, recipe),
+                          onRemoveMeal: (slot) {
+                            setState(() {
+                              _removeMealSlot(dayKey, slot);
+                            });
+                          },
+                          onAddAnotherMeal: () => _showAddMealFlow(
+                            day: day,
+                            preferredSlot: MealSlot.breakfast,
+                          ),
+                        );
+                      },
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 220),
-                    switchInCurve: Curves.easeOut,
-                    switchOutCurve: Curves.easeOut,
-                    transitionBuilder: (child, animation) {
-                      final beginOffset = Offset(
-                        labelDirection > 0 ? 0.18 : -0.18,
-                        0,
-                      );
-                      return FadeTransition(
-                        opacity: animation,
-                        child: SlideTransition(
-                          position: Tween<Offset>(
-                            begin: beginOffset,
-                            end: Offset.zero,
-                          ).animate(animation),
-                          child: child,
-                        ),
-                      );
-                    },
-                    child: Text(
-                      weekRangeLabel,
-                      key: ValueKey<String>(weekRangeLabel),
-                      style: TextStyle(
-                        color: AppColors.textSecondary.withOpacity(0.95),
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    '$plannedCount / 7 days planned',
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12,
+                  SliverToBoxAdapter(
+                    child: FloatingGroceryButton(
+                      visible: _showBottomGroceryButton,
+                      bottomPadding: MediaQuery.of(context).padding.bottom,
+                      onPressed: _generateGroceryList,
                     ),
                   ),
                 ],
               ),
-            ),
-            Row(
-              children: [
-                IconButton(
-                  onPressed: onPreviousWeek,
-                  style: IconButton.styleFrom(
-                    foregroundColor: AppColors.brandGreen.withOpacity(0.70),
-                  ),
-                  icon: const Icon(Icons.chevron_left),
-                ),
-                IconButton(
-                  onPressed: onNextWeek,
-                  style: IconButton.styleFrom(
-                    foregroundColor: AppColors.brandGreen.withOpacity(0.70),
-                  ),
-                  icon: const Icon(Icons.chevron_right),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MealCard extends StatelessWidget {
-  const _MealCard({
-    super.key,
-    required this.recipe,
-    required this.onTap,
-    required this.onLongPress,
-  });
-
-  final RecipeModel recipe;
-  final VoidCallback onTap;
-  final VoidCallback onLongPress;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        onLongPress: onLongPress,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-          decoration: BoxDecoration(
-            color: AppColors.inputBg,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.inputBorderSoft),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.brandGreen.withOpacity(0.10),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                alignment: Alignment.center,
-                child: Icon(recipe.icon, color: AppColors.brandGreen, size: 20),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      recipe.title,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      '⏱ ${recipe.duration} • ${recipe.difficulty}',
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.chevron_right,
-                color: AppColors.textSecondary.withOpacity(0.55),
+              JumpToTodayChip(
+                visible: _showJumpToToday,
+                bottom: MediaQuery.of(context).padding.bottom + 84,
+                onPressed: _scrollToTodayIfVisible,
               ),
             ],
           ),
