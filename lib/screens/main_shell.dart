@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import 'home_page.dart';
-// import 'recipes_page.dart';
-// import 'meal_plan_page.dart';
+import 'meal_plan_page.dart';
+import 'recipes_page.dart';
 // import 'settings_page.dart';
 
 class MainShell extends StatefulWidget {
@@ -18,8 +18,8 @@ class _MainShellState extends State<MainShell> {
 
   late final _pages = <Widget>[
     const HomePage(),
-    const Placeholder(), // RecipesPage()
-    const Placeholder(), // MealPlanPage()
+    const RecipesPage(),
+    const MealPlanPage(),
     const Placeholder(), // SettingsPage()
   ];
 
@@ -35,17 +35,17 @@ class _MainShellState extends State<MainShell> {
               backgroundColor: AppColors.white,
               surfaceTintColor: Colors
                   .transparent, // avoids Material 3 surface tint making it look "different"
-              indicatorColor: AppColors.brandGreen.withOpacity(0.12),
+              indicatorColor: AppColors.brandGreen.withOpacity(0.20),
               iconTheme: MaterialStateProperty.resolveWith((states) {
                 if (states.contains(MaterialState.selected)) {
-                  return const IconThemeData(color: AppColors.brandGreen);
+                  return const IconThemeData(color: AppColors.pressedGreen);
                 }
                 return const IconThemeData(color: AppColors.textSecondary);
               }),
               labelTextStyle: MaterialStateProperty.resolveWith((states) {
                 if (states.contains(MaterialState.selected)) {
                   return const TextStyle(
-                    color: AppColors.brandGreen,
+                    color: AppColors.pressedGreen,
                     fontWeight: FontWeight.w700,
                   );
                 }

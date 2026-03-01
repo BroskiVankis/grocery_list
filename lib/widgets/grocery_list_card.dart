@@ -102,37 +102,13 @@ class _GroceryListCardState extends State<GroceryListCard> {
                                   ),
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          if (widget.list.isFavorite)
-                            Text(
-                              'Saved',
-                              style: Theme.of(context).textTheme.bodySmall
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    color: AppColors.brandGreen,
-                                  ),
-                            ),
                         ],
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(width: 10),
-                if (widget.list.isFavorite)
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.brandGreen.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: const Icon(
-                      Icons.favorite,
-                      size: 20,
-                      color: AppColors.brandGreen,
-                    ),
-                  )
-                else
-                  const Icon(Icons.chevron_right, color: AppColors.footerText),
+                const Icon(Icons.chevron_right, color: AppColors.footerText),
               ],
             ),
           ),

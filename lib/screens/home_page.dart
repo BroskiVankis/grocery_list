@@ -3,6 +3,7 @@ import '../models/grocery_models.dart';
 import '../theme/app_colors.dart';
 import 'list_detail_page.dart';
 import '../widgets/grocery_list_card.dart';
+import '../widgets/common/app_floating_action_button.dart';
 import '../widgets/sheets/create_list_sheet.dart';
 
 class HomePage extends StatefulWidget {
@@ -167,27 +168,12 @@ class _HomePageState extends State<HomePage> {
             : Padding(
                 key: const ValueKey('fab'),
                 padding: EdgeInsets.only(bottom: safeBottom + 8),
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(999),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x2E000000),
-                        blurRadius: 18,
-                        spreadRadius: 0,
-                        offset: Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: FloatingActionButton(
-                    mini: true,
-                    elevation: 0,
-                    highlightElevation: 0,
-                    onPressed: _showCreateListSheet,
-                    backgroundColor: AppColors.brandGreen,
-                    foregroundColor: AppColors.white,
-                    child: const Icon(Icons.add),
-                  ),
+                child: AppFloatingActionButton(
+                  mini: true,
+                  shadowColor: const Color(0x2E000000),
+                  shadowBlur: 18,
+                  shadowOffset: const Offset(0, 6),
+                  onPressed: _showCreateListSheet,
                 ),
               ),
       ),

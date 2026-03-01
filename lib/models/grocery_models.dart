@@ -15,10 +15,9 @@ class GroceryItem {
 }
 
 class GroceryListModel {
-  GroceryListModel({required this.name, this.isFavorite = false});
+  GroceryListModel({required this.name});
 
   String name;
-  bool isFavorite;
 
   final List<GroceryItem> items = [];
 }
