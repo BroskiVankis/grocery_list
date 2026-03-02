@@ -4,7 +4,7 @@ import '../theme/app_colors.dart';
 import 'home_page.dart';
 import 'meal_plan_page.dart';
 import 'recipes_page.dart';
-// import 'settings_page.dart';
+import 'settings_page.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -20,7 +20,7 @@ class _MainShellState extends State<MainShell> {
     const HomePage(),
     const RecipesPage(),
     const MealPlanPage(),
-    const Placeholder(), // SettingsPage()
+    const SettingsPage(),
   ];
 
   @override

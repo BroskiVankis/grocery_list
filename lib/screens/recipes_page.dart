@@ -81,7 +81,7 @@ class _RecipesPageState extends State<RecipesPage> {
     final filteredRecipes = _filteredRecipes;
 
     return Scaffold(
-      backgroundColor: AppColors.sageTop,
+      backgroundColor: AppColors.background,
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: AppFloatingActionButton(
         tooltip: 'Add recipe',
