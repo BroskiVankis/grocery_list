@@ -49,7 +49,14 @@ class ValidatedInputField extends StatelessWidget {
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide(
-            color: AppColors.brandGreen.withOpacity(0.8),
+            color: Theme.of(context).colorScheme.error,
+            width: 1.0,
+          ),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(
+            color: Theme.of(context).colorScheme.error,
             width: 1.0,
           ),
         ),
@@ -118,7 +125,14 @@ class ValidatedPasswordField extends StatelessWidget {
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide(
-            color: AppColors.brandGreen.withOpacity(0.8),
+            color: Theme.of(context).colorScheme.error,
+            width: 1.0,
+          ),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(
+            color: Theme.of(context).colorScheme.error,
             width: 1.0,
           ),
         ),

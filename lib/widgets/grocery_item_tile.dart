@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:grocery_list/state/units_preference.dart';
+import 'package:grocery_list/utils/unit_converter.dart';
 
 import '../theme/app_colors.dart';
 import '../utils/item_emoji.dart';
@@ -19,6 +21,13 @@ class GroceryItemTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final unitsPreference = UnitsPreferenceScope.of(context).preference;
+    final convertedQuantity = UnitConverter.convertWeightOrVolumeForDisplay(
+      metricValue: quantity.toDouble(),
+      metricUnit: unit,
+      preference: unitsPreference,
+    );
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -51,7 +60,7 @@ class GroceryItemTile extends StatelessWidget {
               ),
             ),
             subtitle: Text(
-              '$quantity $unit',
+              convertedQuantity.format(maxFractionDigits: 2),
               style: TextStyle(
                 fontWeight: FontWeight.w700,
                 color: AppColors.brandGreen.withOpacity(0.80),

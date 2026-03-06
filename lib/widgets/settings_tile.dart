@@ -4,12 +4,14 @@ import 'package:grocery_list/theme/app_colors.dart';
 class SettingsTile extends StatelessWidget {
   final IconData icon;
   final String title;
+  final String? subtitle;
   final VoidCallback onTap;
 
   const SettingsTile({
     super.key,
     required this.icon,
     required this.title,
+    this.subtitle,
     required this.onTap,
   });
 
@@ -39,6 +41,14 @@ class SettingsTile extends StatelessWidget {
             title,
             style: textTheme.bodyLarge?.copyWith(color: AppColors.textPrimary),
           ),
+          subtitle: subtitle == null
+              ? null
+              : Text(
+                  subtitle!,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
           trailing: Icon(
             Icons.chevron_right,
             size: 18,
