@@ -5,11 +5,16 @@ class AppColors {
   static const sageTop = Color(0xFFF2F7F3);
   static const white = Color(0xFFFFFFFF);
 
+  // Unified surfaces
+  static const background = sageTop;
+  static const surface = white;
+
   // Brand
   static const brandGreen = Color(0xFF5E8C61);
   static const pressedGreen = Color(0xFF4F7A52);
   static const ctaGreen = Color(0xFF6FA375);
   static const focusGreen = Color(0xFF5F8F67);
+  static const primary = brandGreen;
 
   // Text
   static const textPrimary = Color(0xFF1F2A24);

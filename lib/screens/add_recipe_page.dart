@@ -1,11 +1,14 @@
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../models/recipe_model.dart';
 import '../theme/app_colors.dart';
+import '../widgets/recipe_image_picker.dart';
 
 class AddRecipePage extends StatefulWidget {
   const AddRecipePage({super.key});
@@ -15,6 +18,7 @@ class AddRecipePage extends StatefulWidget {
 }
 
 class _AddRecipePageState extends State<AddRecipePage> {
+  final ImagePicker _imagePicker = ImagePicker();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _servingsController = TextEditingController();
   final TextEditingController _tagInputController = TextEditingController();
@@ -31,6 +35,7 @@ class _AddRecipePageState extends State<AddRecipePage> {
   bool _compressHeader = false;
   bool _showIngredientValidation = false;
   int _ingredientShakeTick = 0;
+  File? _selectedPhoto;
   final Set<TextEditingController> _newIngredientControllers =
       <TextEditingController>{};
   final Set<TextEditingController> _removingIngredientControllers =
@@ -490,6 +495,141 @@ class _AddRecipePageState extends State<AddRecipePage> {
     }
   }
 
+  Future<void> _pickRecipePhoto(ImageSource source) async {
+    try {
+      final photo = await _imagePicker.pickImage(
+        source: source,
+        imageQuality: 85,
+        maxWidth: 1600,
+      );
+      if (photo == null || !mounted) return;
+      setState(() {
+        _selectedPhoto = File(photo.path);
+      });
+    } on PlatformException {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not open camera or photo library right now.'),
+        ),
+      );
+    }
+  }
+
+  Future<void> _showPhotoPickerSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: false,
+      useSafeArea: true,
+      builder: (context) {
+        final colorScheme = Theme.of(context).colorScheme;
+
+        Widget buildActionRow({
+          required IconData icon,
+          required String label,
+          required VoidCallback onTap,
+        }) {
+          return Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(12),
+              splashColor: colorScheme.primary.withOpacity(0.08),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 14,
+                  horizontal: 12,
+                ),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Icon(icon, size: 26),
+                    const SizedBox(width: 12),
+                    Text(label, style: Theme.of(context).textTheme.bodyLarge),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        return Theme(
+          data: Theme.of(context).copyWith(
+            iconTheme: const IconThemeData(color: AppColors.brandGreen),
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
+            ),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Add recipe photo',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                buildActionRow(
+                  icon: Icons.photo_library_outlined,
+                  label: 'Choose from library',
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    Navigator.of(context).pop();
+                    _pickRecipePhoto(ImageSource.gallery);
+                  },
+                ),
+                const SizedBox(height: 12),
+                buildActionRow(
+                  icon: Icons.photo_camera_outlined,
+                  label: 'Take a photo',
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    Navigator.of(context).pop();
+                    _pickRecipePhoto(ImageSource.camera);
+                  },
+                ),
+                const SizedBox(height: 12),
+                Center(
+                  child: TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: Text(
+                      'Cancel',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w500,
+                        color: colorScheme.onSurface.withOpacity(0.6),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   InputDecoration _inputDecoration(String hint, {Color? enabledBorderColor}) {
     return InputDecoration(
       hintText: hint,
@@ -639,22 +779,12 @@ class _AddRecipePageState extends State<AddRecipePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Center(
-                    child: Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: AppColors.brandGreen.withOpacity(0.10),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: const Icon(
-                        Icons.restaurant_menu,
-                        color: AppColors.brandGreen,
-                        size: 26,
-                      ),
-                    ),
+                  const SizedBox(height: 12),
+                  RecipeImagePicker(
+                    image: _selectedPhoto,
+                    onTap: _showPhotoPickerSheet,
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   TextField(
                     controller: _nameController,
                     focusNode: _nameFocusNode,

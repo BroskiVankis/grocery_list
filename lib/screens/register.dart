@@ -236,7 +236,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                 if (s.length < 8) {
                                   return 'Password must be at least 8 characters';
                                 }
-                                final hasNumber = RegExp(r'\\d').hasMatch(s);
+                                final hasNumber = RegExp(r'\d').hasMatch(s);
                                 if (!hasNumber) {
                                   return 'Password must include a number';
                                 }
